@@ -9,18 +9,20 @@ export interface IpcDependencies {
   rooms: RoomsController
   settings: SettingsController
   hub: HubHandle
+  channel: string
   getWindow: () => BrowserWindow | null
   applySettings: (settings: AppSettingsData) => void
 }
 
 /** Registers IPC handlers and forwards hub events to the renderer window. */
 export function registerIpc(dependencies: IpcDependencies): void {
-  const { rooms, settings, hub, getWindow, applySettings } = dependencies
+  const { rooms, settings, hub, channel, getWindow, applySettings } = dependencies
 
   ipcMain.handle(IPC.status, () => ({
     port: hub.port,
     url: `ws://127.0.0.1:${hub.port}`,
     roomCount: rooms.list().length,
+    channel,
   }))
 
   ipcMain.handle(IPC.listRooms, () => rooms.list())

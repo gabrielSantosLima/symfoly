@@ -1,0 +1,21 @@
+extends: ./electron-builder.yml
+appId: com.gabrielsantoslima.symfoly.beta
+productName: Symfoly Beta
+
+directories:
+  output: release-beta
+
+extraMetadata:
+  channel: beta
+
+win:
+  icon: resources/icon-beta.ico
+
+linux:
+  icon: resources/icon-beta.png
+
+extraResources:
+  - from: resources/icon-beta.png
+    to: icon-beta.png
+  - from: resources/icon-beta.ico
+    to: icon-beta.ico

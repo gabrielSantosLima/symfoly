@@ -23,6 +23,7 @@ export interface HubStatus {
   port: number
   url: string
   roomCount: number
+  channel: string
 }
 
 /** Events pushed from the main process to the renderer. */

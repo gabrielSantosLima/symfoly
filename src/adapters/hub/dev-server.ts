@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { EndpointStore } from '../../domain/services/EndpointStore'
+import { EndpointStore, defaultEndpointPath } from '../../domain/services/EndpointStore'
 import { createHubServer } from '../../domain/services/HubServer'
 import { Persistence, defaultStorePath } from '../../domain/services/Persistence'
 import { RoomStore } from '../../domain/services/RoomStore'
@@ -14,8 +14,9 @@ import { SetRoomPausedUseCase } from '../../domain/useCases/SetRoomPausedUseCase
 const rooms = new RoomStore()
 const token = process.env.SYMFOLY_TOKEN ?? randomUUID()
 const port = Number(process.env.SYMFOLY_PORT ?? 0)
+const channel = process.env.SYMFOLY_CHANNEL ?? 'development'
 
-const persistence = new Persistence(defaultStorePath())
+const persistence = new Persistence(defaultStorePath(channel))
 const loaded = persistence.load()
 if (loaded) rooms.restore(loaded)
 rooms.onChange(() => persistence.schedule(rooms.snapshot()))
@@ -33,10 +34,10 @@ const hub = await createHubServer(
   { token, port },
 )
 
-const endpointStore = new EndpointStore()
+const endpointStore = new EndpointStore(defaultEndpointPath(channel))
 endpointStore.save({ port: hub.port, token })
 
-console.log(`symfoly hub listening on ws://127.0.0.1:${hub.port}`)
+console.log(`symfoly hub (${channel}) listening on ws://127.0.0.1:${hub.port}`)
 console.log(`token: ${token}`)
 console.log('press Ctrl+C to stop')
 

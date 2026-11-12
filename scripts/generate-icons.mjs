@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Generates the app icons (PNG + multi-size ICO) from the Symfoly mark.
-// Self-contained: renders the simple geometry (rounded tile, circles, lines)
-// and writes PNG/ICO by hand, so it needs no image dependencies.
+// Generates the app icons per channel (production, dev, beta) from the Symfoly
+// mark. Self-contained: renders the simple geometry (rounded tile, circles,
+// lines) and writes PNG/ICO by hand, so it needs no image dependencies.
 //
 // Usage: node scripts/generate-icons.mjs
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -12,7 +12,7 @@ import { deflateSync } from "node:zlib";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 // --- geometry (coordinates in a 64x64 space) -------------------------------
-const TILE = { x: 2, y: 2, w: 60, h: 60, r: 14, rgb: [79, 70, 229] }; // #4F46E5
+const TILE = { x: 2, y: 2, w: 60, h: 60, r: 14 };
 const WHITE = [255, 255, 255];
 const LINES = [
   [[32, 32], [32, 15]],
@@ -26,6 +26,13 @@ const DOTS = [
   [46, 40, 4.5],
   [32, 32, 7]
 ];
+
+// One tile colour per channel so dev/beta/release are visually distinct.
+const CHANNELS = {
+  icon: [79, 70, 229], // production — #4F46E5
+  "icon-dev": [71, 85, 105], // dev — #475569
+  "icon-beta": [217, 119, 6] // beta — #D97706
+};
 
 function inRoundedRect(x, y, rx, ry, w, h, r) {
   if (x < rx || x > rx + w || y < ry || y > ry + h) return false;
@@ -43,19 +50,19 @@ function distToSegment(px, py, ax, ay, bx, by) {
   return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
 }
 
-function sample(x, y) {
+function sample(x, y, tileRgb) {
   for (const [cx, cy, r] of DOTS) {
     if ((x - cx) ** 2 + (y - cy) ** 2 <= r * r) return WHITE;
   }
   for (const [[ax, ay], [bx, by]] of LINES) {
     if (distToSegment(x, y, ax, ay, bx, by) <= LINE_HALF) return WHITE;
   }
-  if (inRoundedRect(x, y, TILE.x, TILE.y, TILE.w, TILE.h, TILE.r)) return TILE.rgb;
+  if (inRoundedRect(x, y, TILE.x, TILE.y, TILE.w, TILE.h, TILE.r)) return tileRgb;
   return null;
 }
 
 // --- rasterize (supersampled) ----------------------------------------------
-function render(size, ss = 4) {
+function render(size, tileRgb, ss = 4) {
   const scale = 64 / size;
   const rgba = Buffer.alloc(size * size * 4);
   for (let y = 0; y < size; y++) {
@@ -68,7 +75,7 @@ function render(size, ss = 4) {
         for (let sx = 0; sx < ss; sx++) {
           const fx = (x + (sx + 0.5) / ss) * scale;
           const fy = (y + (sy + 0.5) / ss) * scale;
-          const color = sample(fx, fy);
+          const color = sample(fx, fy, tileRgb);
           if (!color) continue;
           r += color[0] / 255;
           g += color[1] / 255;
@@ -137,8 +144,11 @@ function encodePng(size, rgba) {
 }
 
 // --- minimal ICO writer (PNG-compressed entries) ----------------------------
-function encodeIco(sizes) {
-  const images = sizes.map((size) => ({ size, png: encodePng(size, render(size)) }));
+function encodeIco(sizes, tileRgb) {
+  const images = sizes.map((size) => ({
+    size,
+    png: encodePng(size, render(size, tileRgb))
+  }));
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2);
@@ -164,11 +174,14 @@ function encodeIco(sizes) {
 const resources = join(ROOT, "resources");
 mkdirSync(resources, { recursive: true });
 
-writeFileSync(join(resources, "icon.png"), encodePng(512, render(512)));
-writeFileSync(join(resources, "tray.png"), encodePng(32, render(32)));
-writeFileSync(
-  join(resources, "icon.ico"),
-  encodeIco([16, 24, 32, 48, 64, 128, 256])
-);
+for (const [name, tileRgb] of Object.entries(CHANNELS)) {
+  writeFileSync(join(resources, `${name}.png`), encodePng(512, render(512, tileRgb)));
+  writeFileSync(
+    join(resources, `${name}.ico`),
+    encodeIco([16, 24, 32, 48, 64, 128, 256], tileRgb)
+  );
+}
 
-console.log("Wrote resources/icon.png (512), tray.png (32) and icon.ico (16–256).");
+console.log(
+  "Wrote per-channel icons: icon{,-dev,-beta}.png (512) and .ico (16–256)."
+);

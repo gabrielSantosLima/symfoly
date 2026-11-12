@@ -11,7 +11,12 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
     closeRoom: vi.fn().mockResolvedValue(true),
     pauseRoom: vi.fn().mockResolvedValue(true),
     getRoomDetail: vi.fn().mockResolvedValue(undefined),
-    getStatus: vi.fn().mockResolvedValue({ port: 4321, url: 'ws://127.0.0.1:4321', roomCount: 0 }),
+    getStatus: vi.fn().mockResolvedValue({
+      port: 4321,
+      url: 'ws://127.0.0.1:4321',
+      roomCount: 0,
+      channel: 'production',
+    }),
     getSettings: vi.fn().mockResolvedValue({
       theme: 'system',
       retentionMessagesPerRoom: 1000,

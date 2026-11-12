@@ -12,7 +12,7 @@ import {
 } from 'electron'
 import { RoomsController } from '../controllers/RoomsController'
 import { SettingsController } from '../controllers/SettingsController'
-import { EndpointStore } from '../domain/services/EndpointStore'
+import { EndpointStore, defaultEndpointPath } from '../domain/services/EndpointStore'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
 import { Persistence } from '../domain/services/Persistence'
 import { RoomStore } from '../domain/services/RoomStore'
@@ -26,8 +26,16 @@ import { ListRoomsUseCase } from '../domain/useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
-import { registerIpc } from './ipc'
 import type { AppSettingsData } from '../shared/settings'
+import { CHANNELS, resolveChannel, resourcePath } from './channels'
+import { registerIpc } from './ipc'
+
+const channel = resolveChannel()
+const channelConfig = CHANNELS[channel]
+
+// Channel identity must be set before the app is ready so userData is separate.
+app.setName(channelConfig.name)
+app.setPath('userData', join(app.getPath('appData'), channelConfig.userData))
 
 let mainWindow: BrowserWindow | null = null
 let hub: HubHandle | null = null
@@ -35,7 +43,17 @@ let persistence: Persistence | null = null
 let tray: Tray | null = null
 let isQuitting = false
 
-const endpointStore = new EndpointStore()
+const endpointStore = new EndpointStore(defaultEndpointPath(channel))
+
+function windowIconPath(): string {
+  return resourcePath(process.platform === 'win32' ? channelConfig.ico : channelConfig.png)
+}
+
+function trayIcon(): NativeImage {
+  const image = nativeImage.createFromPath(resourcePath(channelConfig.png))
+  if (image.isEmpty()) return nativeImage.createFromPath(resourcePath('icon.png'))
+  return image.resize({ width: 16, height: 16 })
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -43,6 +61,8 @@ function createWindow(): void {
     height: 720,
     show: false,
     autoHideMenuBar: true,
+    title: app.getName(),
+    icon: windowIconPath(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
@@ -76,17 +96,6 @@ function createWindow(): void {
   }
 }
 
-function trayIcon(): NativeImage {
-  const candidates = app.isPackaged
-    ? [join(process.resourcesPath, 'tray.png'), join(process.resourcesPath, 'icon.png')]
-    : [join(__dirname, '../../resources/tray.png'), join(__dirname, '../../resources/icon.png')]
-  for (const candidate of candidates) {
-    const image = nativeImage.createFromPath(candidate)
-    if (!image.isEmpty()) return image
-  }
-  return nativeImage.createEmpty()
-}
-
 function showWindow(): void {
   if (!mainWindow) {
     createWindow()
@@ -102,7 +111,7 @@ function createTray(): void {
   const image = trayIcon()
   if (image.isEmpty()) return
   tray = new Tray(image)
-  tray.setToolTip('Symfoly')
+  tray.setToolTip(app.getName())
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Symfoly', click: () => showWindow() },
@@ -158,20 +167,38 @@ async function bootstrap(): Promise<void> {
     getRoomDetail: new GetRoomDetailUseCase(rooms, receiveMessages),
   })
 
-  registerIpc({ rooms: controller, settings, hub, getWindow: () => mainWindow, applySettings })
+  registerIpc({
+    rooms: controller,
+    settings,
+    hub,
+    channel,
+    getWindow: () => mainWindow,
+    applySettings,
+  })
   createTray()
   createWindow()
 }
 
-app.whenReady().then(() => {
-  ipcMain.handle('app:version', () => app.getVersion())
+const gotTheLock = app.requestSingleInstanceLock()
 
-  void bootstrap()
-
-  app.on('activate', () => {
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
     showWindow()
   })
-})
+
+  app.whenReady().then(() => {
+    app.setAppUserModelId(channelConfig.appUserModelId)
+    ipcMain.handle('app:version', () => app.getVersion())
+
+    void bootstrap()
+
+    app.on('activate', () => {
+      showWindow()
+    })
+  })
+}
 
 app.on('window-all-closed', () => {
   if (isQuitting || !tray) app.quit()

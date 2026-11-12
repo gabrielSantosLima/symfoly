@@ -8,9 +8,10 @@ export interface Endpoint {
 }
 
 /** Where the running hub advertises itself so CLI/MCP clients can find it. */
-export function defaultEndpointPath(): string {
+export function defaultEndpointPath(channel = process.env.SYMFOLY_CHANNEL ?? 'production'): string {
   const base = process.env.SYMFOLY_HOME ?? join(homedir(), '.symfoly')
-  return join(base, 'endpoint.json')
+  const suffix = channel === 'production' ? '' : `-${channel}`
+  return join(base, `endpoint${suffix}.json`)
 }
 
 export class EndpointStore {

@@ -13,9 +13,10 @@ export interface Snapshot {
   rooms: RoomSnapshot[]
 }
 
-export function defaultStorePath(): string {
+export function defaultStorePath(channel = process.env.SYMFOLY_CHANNEL ?? 'production'): string {
   const base = process.env.SYMFOLY_HOME ?? join(homedir(), '.symfoly')
-  return join(base, 'store.json')
+  const suffix = channel === 'production' ? '' : `-${channel}`
+  return join(base, `store${suffix}.json`)
 }
 
 /**

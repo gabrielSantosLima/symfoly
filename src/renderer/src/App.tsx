@@ -129,7 +129,9 @@ export default function App() {
       </header>
 
       <div className="status">
-        {status ? `hub ${status.url} · ${status.roomCount} room(s)` : 'connecting to hub…'}
+        {status
+          ? `${status.channel !== 'production' ? `[${status.channel}] ` : ''}hub ${status.url} · ${status.roomCount} room(s)`
+          : 'connecting to hub…'}
       </div>
 
       <div className="layout">
