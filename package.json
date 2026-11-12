@@ -22,10 +22,13 @@
     "dist": "npm run build && npm run package",
     "icons": "node scripts/generate-icons.mjs",
     "hub": "tsx src/adapters/hub/dev-server.ts",
-    "symfoly": "tsx src/adapters/cli/index.ts"
+    "symfoly": "tsx src/adapters/cli/index.ts",
+    "mcp": "tsx src/adapters/mcp/server.ts"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "ws": "^8.18.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
