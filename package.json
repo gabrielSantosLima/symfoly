@@ -22,6 +22,9 @@
     "dist": "npm run build && npm run package",
     "icons": "node scripts/generate-icons.mjs"
   },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
     "@testing-library/jest-dom": "^6.5.0",
@@ -29,6 +32,7 @@
     "@types/node": "^22.7.4",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
+    "@types/ws": "^8.5.12",
     "@vitejs/plugin-react": "^4.3.2",
     "electron": "^32.2.0",
     "electron-builder": "^25.1.7",
