@@ -16,21 +16,21 @@ export function Transcript() {
 
   if (!detail) {
     return (
-      <div className="flex flex-1 items-center justify-center p-8 text-sm text-slate-500 dark:text-slate-400">
+      <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted">
         Select a room to watch the conversation.
       </div>
     )
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4 dark:border-slate-800">
+    <section className="flex min-h-0 flex-1 flex-col bg-app">
+      <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <div>
           <div className="flex items-center gap-2">
             <h2 className="font-semibold">{detail.room.name}</h2>
             <Badge tone={roomTone(detail.room)}>{roomLabel(detail.room)}</Badge>
           </div>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-1 text-xs text-muted">
             {detail.participants.length
               ? detail.participants.map((participant) => participant.name).join(', ')
               : 'no participants'}{' '}
@@ -53,9 +53,9 @@ export function Transcript() {
         ) : null}
       </div>
 
-      <ol className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
+      <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">
         {detail.room.brief ? (
-          <li className="rounded-md bg-slate-100 px-3 py-2 text-sm italic text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+          <li className="rounded-md bg-surface-2 px-3 py-2 text-sm italic text-muted">
             brief: {detail.room.brief}
           </li>
         ) : null}
@@ -63,7 +63,7 @@ export function Transcript() {
           <MessageItem key={message.id} message={message} />
         ))}
         {detail.messages.length === 0 && !detail.room.brief ? (
-          <li className="text-sm text-slate-500 dark:text-slate-400">No messages yet.</li>
+          <li className="text-sm text-muted">No messages yet.</li>
         ) : null}
         <div ref={endRef} />
       </ol>

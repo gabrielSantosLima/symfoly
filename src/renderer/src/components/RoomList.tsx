@@ -12,7 +12,7 @@ function RoomButton({ room }: { room: RoomInfo }) {
       onClick={() => select(room.id)}
       aria-current={active ? 'true' : undefined}
       className={`flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
-        active ? 'bg-indigo-600 text-white' : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+        active ? 'bg-brand text-brand-fg' : 'hover:bg-surface-2'
       }`}
     >
       <span className="truncate font-medium">{room.name}</span>
@@ -24,7 +24,7 @@ function RoomButton({ room }: { room: RoomInfo }) {
 export function RoomList() {
   const { rooms } = useAppData()
   if (rooms.length === 0) {
-    return <p className="px-3 py-2 text-sm text-slate-500 dark:text-slate-400">No rooms yet.</p>
+    return <p className="px-3 py-2 text-sm text-muted">No rooms yet.</p>
   }
   return (
     <ul className="flex flex-col gap-1">

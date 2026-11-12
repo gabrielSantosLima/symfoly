@@ -35,7 +35,7 @@ export function CreateRoomForm() {
       <button type="submit" className={buttonClass}>
         Create room
       </button>
-      {error ? <p className="text-xs text-red-500">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
     </form>
   )
 }

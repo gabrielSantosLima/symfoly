@@ -5,6 +5,7 @@ import type { AppSettingsData } from '../../../shared/settings'
 
 export interface AppData {
   status: HubStatus | null
+  version: string
   rooms: RoomInfo[]
   selected: string | null
   detail: RoomDetail | null
@@ -22,6 +23,7 @@ const AppDataContext = createContext<AppData | null>(null)
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const client = window.symfoly
   const [status, setStatus] = useState<HubStatus | null>(null)
+  const [version, setVersion] = useState('')
   const [rooms, setRooms] = useState<RoomInfo[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<RoomDetail | null>(null)
@@ -44,6 +46,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!client) return
+    void client
+      .getVersion()
+      .then(setVersion)
+      .catch(() => setVersion(''))
     void client.getSettings().then(setSettings)
     void refresh()
     return client.onEvent((event: HubEvent) => {
@@ -110,6 +116,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const value: AppData = {
     status,
+    version,
     rooms,
     selected,
     detail,

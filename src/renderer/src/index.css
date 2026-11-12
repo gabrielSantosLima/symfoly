@@ -1,8 +1,53 @@
 @import 'tailwindcss';
 
-/* The app stores the resolved theme on <html data-theme="light|dark">,
-   so dark: utilities must follow that attribute, not the media query. */
+/* The app stores the resolved theme on <html data-theme="light|dark">. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Single source of truth for colours: change here to re-theme everything. */
+:root {
+  --app: #f1f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --border: #e2e8f0;
+  --fg: #0f172a;
+  --muted: #64748b;
+  --brand: #4f46e5;
+  --brand-hover: #4338ca;
+  --brand-fg: #ffffff;
+  --success: #059669;
+  --warning: #b45309;
+  --danger: #dc2626;
+}
+
+:root[data-theme='dark'] {
+  --app: #0b1120;
+  --surface: #111827;
+  --surface-2: #1e293b;
+  --border: #1f2937;
+  --fg: #e5e7eb;
+  --muted: #94a3b8;
+  --brand: #6366f1;
+  --brand-hover: #818cf8;
+  --brand-fg: #ffffff;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+}
+
+@theme inline {
+  --color-app: var(--app);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-fg: var(--brand-fg);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
 
 @layer base {
   html,
@@ -18,10 +63,10 @@
       -apple-system,
       'Segoe UI',
       sans-serif;
-    @apply bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100;
+    @apply bg-app text-fg antialiased;
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-indigo-500 ring-offset-0;
+    @apply outline-none ring-2 ring-brand;
   }
 }

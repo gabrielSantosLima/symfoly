@@ -1,8 +1,12 @@
+export type View = 'rooms' | 'agents' | 'settings' | 'about'
+
 export const inputClass =
-  'rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100'
+  'rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted focus:border-brand'
 
 export const buttonClass =
-  'rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500'
+  'rounded-md bg-brand px-3 py-2 text-sm font-semibold text-brand-fg hover:bg-brand-hover'
 
 export const buttonGhostClass =
-  'rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800'
+  'rounded-md border border-border px-3 py-1.5 text-sm font-medium text-fg hover:bg-surface-2'
+
+export const cardClass = 'rounded-xl border border-border bg-surface'
