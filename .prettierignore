@@ -1,0 +1,11 @@
+node_modules
+out
+dist
+release
+package-lock.json
+AGENTS.md
+.harness.json
+.agent
+docs
+.github
+scripts

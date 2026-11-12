@@ -1,0 +1,84 @@
+{
+  "harness": {
+    "version": 2,
+    "commit": "00e34971647785495cbc3c3c0de97552544dd7d8"
+  },
+  "project": {
+    "name": "Symfoly",
+    "slug": "symfoly",
+    "description": "A message orchestrator to broadcast messages between agents",
+    "type": "desktop",
+    "license": "MIT",
+    "owner": "gabrielSantosLima",
+    "repo": "gabrielSantosLima/symfoly"
+  },
+  "git": {
+    "commitAutonomy": "commit-and-push-when-asked",
+    "defaultBranch": "main"
+  },
+  "quality": {
+    "checks": [
+      "npm ci",
+      "npm run lint",
+      "npm run typecheck",
+      "npm test",
+      "npm run format:check"
+    ],
+    "ciDepth": "full",
+    "os": [
+      "ubuntu-latest",
+      "windows-latest"
+    ]
+  },
+  "version": {
+    "source": "file",
+    "file": "package.json",
+    "pointer": "version"
+  },
+  "release": {
+    "trigger": "workflow_dispatch",
+    "notesLanguage": "en",
+    "sections": [
+      "features",
+      "fixes",
+      "chores",
+      "other",
+      "known-issues"
+    ],
+    "attachArtifacts": true
+  },
+  "deploy": {
+    "target": "none",
+    "trigger": "manual",
+    "artifact": "release/"
+  },
+  "skills": [
+    "commit-and-push",
+    "release-summary",
+    "release-cut",
+    "add-skill"
+  ],
+  "hygiene": {
+    "pullRequestTemplate": true,
+    "codeowners": true,
+    "codeownersOwner": "@gabrielSantosLima"
+  },
+  "ignore": [
+    "PLAN.md",
+    "NOTES.md",
+    ".env",
+    "node_modules/",
+    "dist/",
+    "out/",
+    "release/"
+  ],
+  "build": {
+    "command": "npm ci && npm run build && npm run package",
+    "artifacts": [
+      "release/*.exe",
+      "release/*.AppImage",
+      "release/*.deb"
+    ],
+    "attachToRelease": true
+  }
+}
