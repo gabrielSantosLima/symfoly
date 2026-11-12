@@ -8,6 +8,8 @@ export interface CreateRoomInput {
 }
 
 export class Room {
+  private paused = false
+
   private constructor(
     readonly id: string,
     readonly name: string,
@@ -27,6 +29,14 @@ export class Room {
     return this.status === 'open'
   }
 
+  get isPaused(): boolean {
+    return this.paused
+  }
+
+  setPaused(value: boolean): void {
+    this.paused = value
+  }
+
   close(now = Date.now()): void {
     if (!this.isOpen) return
     this.status = 'closed'
@@ -43,6 +53,7 @@ export class Room {
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       closedAt: this.closedOn,
+      paused: this.paused,
     }
   }
 }

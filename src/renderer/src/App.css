@@ -152,6 +152,16 @@ button:hover {
   color: #fecaca;
 }
 
+.badge.paused {
+  background: #78350f;
+  color: #fde68a;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .transcript {
   border: 1px solid #1e293b;
   border-radius: 0.5rem;

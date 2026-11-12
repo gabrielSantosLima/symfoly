@@ -39,6 +39,7 @@ export interface RoomInfo {
   createdBy: string
   createdAt: number
   closedAt?: number
+  paused?: boolean
 }
 
 export interface RoomDetail {

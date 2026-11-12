@@ -6,6 +6,7 @@ export const IPC = {
   listRooms: 'rooms:list',
   createRoom: 'rooms:create',
   closeRoom: 'rooms:close',
+  pauseRoom: 'rooms:pause',
   roomDetail: 'rooms:detail',
   event: 'symfoly:event',
 } as const

@@ -14,6 +14,7 @@ import type { LeaveRoomUseCase } from '../useCases/LeaveRoomUseCase'
 import type { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
 import type { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
 import type { SendMessageUseCase } from '../useCases/SendMessageUseCase'
+import type { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 
 export interface HubServerDependencies {
   joinRoom: JoinRoomUseCase
@@ -22,6 +23,7 @@ export interface HubServerDependencies {
   receiveMessages: ReceiveMessagesUseCase
   listRooms: ListRoomsUseCase
   closeRoom: CloseRoomUseCase
+  setRoomPaused: SetRoomPausedUseCase
 }
 
 export interface HubServerOptions {
@@ -49,6 +51,7 @@ export interface HubHandle {
   token: string
   on<K extends keyof HubEvents>(event: K, listener: HubEvents[K]): void
   closeRoom(room: string): void
+  setRoomPaused(room: string, paused: boolean): void
   close(): Promise<void>
 }
 
@@ -311,6 +314,13 @@ export function createHubServer(
           if (!closed) return
           broadcast(room, { type: 'closed', room })
           notify('closed', room)
+          notify('rooms')
+        },
+        setRoomPaused: (room: string, paused: boolean) => {
+          const result = dependencies.setRoomPaused.execute(room, paused)
+          if (!result) return
+          broadcast(room, { type: 'message', message: result.message })
+          notify('message', result.message)
           notify('rooms')
         },
         close: () =>

@@ -63,12 +63,26 @@ export class RoomStore {
     return room
   }
 
-  append(name: string, input: Omit<NewMessage, 'room'>): Message {
+  pause(name: string, paused: boolean): Room | undefined {
     const room = this.rooms.get(name)
-    if (!room) throw new Error(`room not found: ${name}`)
-    const seq = (this.counters.get(name) ?? 0) + 1
-    this.counters.set(name, seq)
-    const message = Message.create(seq, { ...input, room: name })
+    room?.setPaused(paused)
+    return room
+  }
+
+  count(name: string): number {
+    return (this.messages.get(name) ?? []).length
+  }
+
+  append(name: string, input: Omit<NewMessage, 'room'>): Message {
+    if (!this.rooms.has(name)) throw new Error(`room not found: ${name}`)
+    const message = Message.create(this.nextSeq(name), { ...input, room: name })
+    this.messages.get(name)?.push(message)
+    return message
+  }
+
+  appendSystem(name: string, text: string): Message {
+    if (!this.rooms.has(name)) throw new Error(`room not found: ${name}`)
+    const message = Message.system(this.nextSeq(name), name, text)
     this.messages.get(name)?.push(message)
     return message
   }
@@ -77,5 +91,11 @@ export class RoomStore {
     return (this.messages.get(name) ?? [])
       .filter((message) => message.seq > since && message.senderId !== excludeSender)
       .map((message) => message.toProtocol())
+  }
+
+  private nextSeq(name: string): number {
+    const seq = (this.counters.get(name) ?? 0) + 1
+    this.counters.set(name, seq)
+    return seq
   }
 }

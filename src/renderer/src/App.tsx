@@ -90,6 +90,13 @@ export default function App() {
     await loadDetail(selected)
   }
 
+  async function setPaused(paused: boolean): Promise<void> {
+    if (!api || !selected) return
+    await api.pauseRoom(selected, paused)
+    await refresh()
+    await loadDetail(selected)
+  }
+
   return (
     <div className="app">
       <header>
@@ -138,7 +145,9 @@ export default function App() {
                   onClick={() => setSelected(room.id)}
                 >
                   <span className="room-name">{room.name}</span>
-                  <span className={`badge ${room.status}`}>{room.status}</span>
+                  <span className={`badge ${room.paused ? 'paused' : room.status}`}>
+                    {room.paused ? 'paused' : room.status}
+                  </span>
                 </button>
               </li>
             ))}
@@ -152,17 +161,25 @@ export default function App() {
               <div className="transcript-header">
                 <div>
                   <strong>{detail.room.name}</strong>
-                  <span className={`badge ${detail.room.status}`}>{detail.room.status}</span>
+                  <span className={`badge ${detail.room.paused ? 'paused' : detail.room.status}`}>
+                    {detail.room.paused ? 'paused' : detail.room.status}
+                  </span>
                   <div className="participants">
                     {detail.participants.length
                       ? detail.participants.map((participant) => participant.name).join(', ')
                       : 'no participants'}
+                    {` · ${detail.messages.length} message(s)`}
                   </div>
                 </div>
                 {detail.room.status === 'open' ? (
-                  <button type="button" onClick={() => void close()}>
-                    Close room
-                  </button>
+                  <div className="actions">
+                    <button type="button" onClick={() => void setPaused(!detail.room.paused)}>
+                      {detail.room.paused ? 'Resume' : 'Pause'}
+                    </button>
+                    <button type="button" onClick={() => void close()}>
+                      Close room
+                    </button>
+                  </div>
                 ) : null}
               </div>
 

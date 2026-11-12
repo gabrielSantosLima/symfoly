@@ -8,6 +8,7 @@ import { LeaveRoomUseCase } from '../domain/useCases/LeaveRoomUseCase'
 import { ListRoomsUseCase } from '../domain/useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
+import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
 import { HubClient } from './HubClient'
 
 const TOKEN = 'test-token'
@@ -24,6 +25,7 @@ async function startHub(): Promise<string> {
       receiveMessages: new ReceiveMessagesUseCase(rooms),
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
+      setRoomPaused: new SetRoomPausedUseCase(rooms),
     },
     { token: TOKEN, port: 0 },
   )

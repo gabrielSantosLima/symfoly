@@ -21,6 +21,10 @@ export function registerIpc(
     hub.closeRoom(room)
     return true
   })
+  ipcMain.handle(IPC.pauseRoom, (_event, room: string, paused: boolean) => {
+    hub.setRoomPaused(room, paused)
+    return true
+  })
   ipcMain.handle(IPC.roomDetail, (_event, room: string) => controller.detail(room))
 
   const forward = (event: HubEvent): void => {

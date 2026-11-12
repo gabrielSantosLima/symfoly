@@ -7,6 +7,7 @@ import { LeaveRoomUseCase } from '../useCases/LeaveRoomUseCase'
 import { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../useCases/SendMessageUseCase'
+import { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 import { createHubServer, type HubHandle } from './HubServer'
 import { RoomStore } from './RoomStore'
 
@@ -24,6 +25,7 @@ async function startHub(): Promise<{ url: string; hub: HubHandle }> {
       receiveMessages: new ReceiveMessagesUseCase(rooms),
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
+      setRoomPaused: new SetRoomPausedUseCase(rooms),
     },
     { token: TOKEN, port: 0 },
   )
@@ -149,5 +151,19 @@ describe('HubServer', () => {
     a.send({ type: 'send', room: 'r1', text: 'after close' })
     const error = await a.next('error')
     expect(error.code).toBe('room_closed')
+  })
+
+  it('announces a pause and blocks further sends', async () => {
+    const { url, hub } = await startHub()
+    const a = await connect(url, 'a')
+    await join(a, 'r1')
+
+    const paused = a.next('message')
+    hub.setRoomPaused('r1', true)
+    expect((await paused).message.kind).toBe('system')
+
+    a.send({ type: 'send', room: 'r1', text: 'after pause' })
+    const error = await a.next('error')
+    expect(error.code).toBe('paused')
   })
 })

@@ -9,6 +9,7 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
     listRooms: vi.fn().mockResolvedValue([]),
     createRoom: vi.fn(),
     closeRoom: vi.fn().mockResolvedValue(true),
+    pauseRoom: vi.fn().mockResolvedValue(true),
     getRoomDetail: vi.fn().mockResolvedValue(undefined),
     getStatus: vi.fn().mockResolvedValue({ port: 4321, url: 'ws://127.0.0.1:4321', roomCount: 0 }),
     onEvent: vi.fn().mockReturnValue(() => {}),

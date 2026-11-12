@@ -13,6 +13,7 @@ import { LeaveRoomUseCase } from '../domain/useCases/LeaveRoomUseCase'
 import { ListRoomsUseCase } from '../domain/useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
+import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
 import { registerIpc } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
@@ -65,6 +66,7 @@ async function bootstrap(): Promise<void> {
       receiveMessages,
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
+      setRoomPaused: new SetRoomPausedUseCase(rooms),
     },
     { token: randomUUID(), port: 0 },
   )

@@ -9,6 +9,7 @@ import { JoinRoomUseCase } from './JoinRoomUseCase'
 import { ListRoomsUseCase } from './ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from './ReceiveMessagesUseCase'
 import { SendMessageUseCase } from './SendMessageUseCase'
+import { SetRoomPausedUseCase } from './SetRoomPausedUseCase'
 
 function build() {
   const rooms = new RoomStore()
@@ -84,5 +85,52 @@ describe('use cases', () => {
     expect(detail?.participants.map((p) => p.name)).toEqual(['a'])
     expect(detail?.messages.map((m) => m.text)).toEqual(['hello'])
     expect(getRoomDetail.execute('missing')).toBeUndefined()
+  })
+
+  it('rejects sending to a paused room', () => {
+    const rooms = new RoomStore()
+    new CreateRoomUseCase(rooms).execute({ name: 'r1', createdBy: 'human' })
+    new JoinRoomUseCase(rooms).execute({ room: 'r1', sessionId: 's1', name: 'a', kind: 'agent' })
+    new SetRoomPausedUseCase(rooms).execute('r1', true)
+    const send = new SendMessageUseCase(rooms)
+    try {
+      send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'hi' })
+      expect.unreachable('expected sendMessage to throw')
+    } catch (error) {
+      expect((error as DomainError).code).toBe('paused')
+    }
+  })
+
+  it('enforces the per-room message cap', () => {
+    const rooms = new RoomStore()
+    new CreateRoomUseCase(rooms).execute({ name: 'r1', createdBy: 'human' })
+    new JoinRoomUseCase(rooms).execute({ room: 'r1', sessionId: 's1', name: 'a', kind: 'agent' })
+    const send = new SendMessageUseCase(rooms, undefined, { maxMessagesPerRoom: 2 })
+    send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'one' })
+    send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'two' })
+    try {
+      send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'three' })
+      expect.unreachable('expected sendMessage to throw')
+    } catch (error) {
+      expect((error as DomainError).code).toBe('room_full')
+    }
+  })
+
+  it('enforces the sender rate limit', () => {
+    const rooms = new RoomStore()
+    new CreateRoomUseCase(rooms).execute({ name: 'r1', createdBy: 'human' })
+    new JoinRoomUseCase(rooms).execute({ room: 'r1', sessionId: 's1', name: 'a', kind: 'agent' })
+    const send = new SendMessageUseCase(rooms, undefined, {
+      rateLimit: 1,
+      rateWindowMs: 60_000,
+      maxMessagesPerRoom: 100,
+    })
+    send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'one' })
+    try {
+      send.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'two' })
+      expect.unreachable('expected sendMessage to throw')
+    } catch (error) {
+      expect((error as DomainError).code).toBe('rate_limited')
+    }
   })
 })
