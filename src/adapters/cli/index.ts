@@ -1,5 +1,5 @@
 import type { MessageKind } from '../../shared/protocol'
-import { EndpointStore } from '../../domain/services/EndpointStore'
+import { resolveEndpoint } from '../../domain/services/EndpointStore'
 import { HubClient } from '../HubClient'
 import { parseArgs, type ParsedArgs } from './args'
 
@@ -13,8 +13,8 @@ function required(value: string | undefined, label: string): string {
   return value
 }
 
-function resolveEndpoint(flags: ParsedArgs['flags']): { url: string; token: string } {
-  const endpoint = new EndpointStore().load()
+function resolveConnection(flags: ParsedArgs['flags']): { url: string; token: string } {
+  const endpoint = resolveEndpoint()
   const url =
     stringFlag(flags, 'url') ??
     process.env.SYMFOLY_URL ??
@@ -50,7 +50,7 @@ async function main(): Promise<void> {
     return
   }
 
-  const { url, token } = resolveEndpoint(flags)
+  const { url, token } = resolveConnection(flags)
   const name = stringFlag(flags, 'as') ?? process.env.SYMFOLY_NAME ?? 'cli'
   const client = await HubClient.connect({ url, token, name })
 

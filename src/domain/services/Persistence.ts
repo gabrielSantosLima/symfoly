@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { ParticipantInfo, ProtocolMessage, RoomInfo } from '../../shared/protocol'
+import { symfolyHome } from './paths'
 
 export interface RoomSnapshot {
   room: RoomInfo
@@ -14,9 +14,8 @@ export interface Snapshot {
 }
 
 export function defaultStorePath(channel = process.env.SYMFOLY_CHANNEL ?? 'production'): string {
-  const base = process.env.SYMFOLY_HOME ?? join(homedir(), '.symfoly')
   const suffix = channel === 'production' ? '' : `-${channel}`
-  return join(base, `store${suffix}.json`)
+  return join(symfolyHome(), `store${suffix}.json`)
 }
 
 /**

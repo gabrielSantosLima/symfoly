@@ -18,6 +18,8 @@ extraResources:
     to: mcp.mjs
   - from: resources/symfoly.mjs
     to: symfoly.mjs
+  - from: agent-skills
+    to: agent-skills
 
 win:
   target:

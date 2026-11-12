@@ -1,17 +1,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
-import { EndpointStore } from '../../domain/services/EndpointStore'
+import { resolveEndpoint } from '../../domain/services/EndpointStore'
 import { HubClient } from '../HubClient'
 import { SymfolyTools } from './tools'
 
-function resolveEndpoint(): { url: string; token: string } {
-  const endpoint = new EndpointStore().load()
+function resolveConnection(): { url: string; token: string } {
+  const endpoint = resolveEndpoint()
   const url = process.env.SYMFOLY_URL ?? (endpoint ? `ws://127.0.0.1:${endpoint.port}` : undefined)
   const token = process.env.SYMFOLY_TOKEN ?? endpoint?.token
   if (!url || !token) {
     throw new Error(
-      'No Symfoly hub. Start it with "npm run hub" or set SYMFOLY_URL and SYMFOLY_TOKEN.',
+      'No running Symfoly hub found. Open the app (or run "npm run hub") and try again.',
     )
   }
   return { url, token }
@@ -22,7 +22,7 @@ function textResult(data: unknown) {
 }
 
 async function main(): Promise<void> {
-  const { url, token } = resolveEndpoint()
+  const { url, token } = resolveConnection()
   const name = process.env.SYMFOLY_NAME ?? 'mcp'
   const client = await HubClient.connect({ url, token, name })
   const tools = new SymfolyTools(client)

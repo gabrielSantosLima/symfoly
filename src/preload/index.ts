@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { SymfolyApi } from '../shared/api'
 import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
 import type { AppSettingsData } from '../shared/settings'
-
 const api: SymfolyApi = {
   getVersion: () => ipcRenderer.invoke('app:version'),
   listRooms: () => ipcRenderer.invoke(IPC.listRooms),
@@ -13,6 +12,7 @@ const api: SymfolyApi = {
   getStatus: () => ipcRenderer.invoke(IPC.status),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   saveSettings: (patch: Partial<AppSettingsData>) => ipcRenderer.invoke(IPC.saveSettings, patch),
+  setupAgents: () => ipcRenderer.invoke(IPC.setupAgents),
   onEvent: (handler: (event: HubEvent) => void) => {
     const listener = (_event: IpcRendererEvent, payload: HubEvent): void => handler(payload)
     ipcRenderer.on(IPC.event, listener)

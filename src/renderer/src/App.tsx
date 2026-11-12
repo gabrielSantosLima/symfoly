@@ -5,6 +5,7 @@ import { useTheme } from './hooks/useTheme'
 import type { View } from './lib/ui'
 import { AboutView } from './views/AboutView'
 import { AgentsView } from './views/AgentsView'
+import { ConnectView } from './views/ConnectView'
 import { RoomsView } from './views/RoomsView'
 import { SettingsView } from './views/SettingsView'
 
@@ -14,11 +15,12 @@ function Shell() {
   useTheme(settings)
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full overflow-hidden">
       <NavRail view={view} onChange={setView} />
-      <main className="flex min-h-0 flex-1 flex-col">
+      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {view === 'rooms' ? <RoomsView /> : null}
         {view === 'agents' ? <AgentsView /> : null}
+        {view === 'connect' ? <ConnectView /> : null}
         {view === 'settings' ? <SettingsView /> : null}
         {view === 'about' ? <AboutView /> : null}
       </main>

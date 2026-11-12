@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
+import { createRequire } from 'node:module'
+import { homedir } from 'node:os'
+import { dirname, join } from 'node:path'
 import {
   Menu,
   Tray,
@@ -13,10 +16,13 @@ import {
 import { RoomsController } from '../controllers/RoomsController'
 import { SettingsController } from '../controllers/SettingsController'
 import { EndpointStore, defaultEndpointPath } from '../domain/services/EndpointStore'
+import { AgentSetup, type SetupTarget } from '../domain/services/AgentSetup'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
+import { Launchers, type LauncherSpec } from '../domain/services/Launchers'
 import { Persistence } from '../domain/services/Persistence'
 import { RoomStore } from '../domain/services/RoomStore'
 import { SettingsStore } from '../domain/services/SettingsStore'
+import { symfolyHome } from '../domain/services/paths'
 import { CloseRoomUseCase } from '../domain/useCases/CloseRoomUseCase'
 import { CreateRoomUseCase } from '../domain/useCases/CreateRoomUseCase'
 import { GetRoomDetailUseCase } from '../domain/useCases/GetRoomDetailUseCase'
@@ -27,6 +33,7 @@ import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCas
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
 import type { AppSettingsData } from '../shared/settings'
+import type { ConnectInfo } from '../shared/ipc'
 import { CHANNELS, resolveChannel, resourcePath } from './channels'
 import { registerIpc } from './ipc'
 
@@ -53,6 +60,42 @@ function trayIcon(): NativeImage {
   const image = nativeImage.createFromPath(resourcePath(channelConfig.png))
   if (image.isEmpty()) return nativeImage.createFromPath(resourcePath('icon.png'))
   return image.resize({ width: 16, height: 16 })
+}
+
+/** Spec used both for the launcher shims and the Connect view. */
+function adapterSpec(bundled: string, sourceRelativePath: string): LauncherSpec {
+  const bundledPath = resourcePath(bundled)
+  if (app.isPackaged || existsSync(bundledPath)) {
+    return { command: process.execPath, args: [bundledPath] }
+  }
+  try {
+    const require = createRequire(import.meta.url)
+    const tsx = join(dirname(require.resolve('tsx/package.json')), 'dist', 'cli.mjs')
+    return { command: process.execPath, args: [tsx, join(app.getAppPath(), sourceRelativePath)] }
+  } catch {
+    return { command: process.execPath, args: [join(app.getAppPath(), sourceRelativePath)] }
+  }
+}
+
+function buildConnectInfo(): ConnectInfo {
+  const launcherDir = new Launchers().write({
+    mcp: adapterSpec('mcp.mjs', 'src/adapters/mcp/server.ts'),
+    cli: adapterSpec('symfoly.mjs', 'src/adapters/cli/index.ts'),
+  })
+  return {
+    launcher: join(launcherDir, 'symfoly-mcp.cmd'),
+    cliLauncher: join(launcherDir, 'symfoly.cmd'),
+    mcpPath: app.isPackaged
+      ? resourcePath('mcp.mjs')
+      : join(app.getAppPath(), 'src/adapters/mcp/server.ts'),
+    cliPath: app.isPackaged
+      ? resourcePath('symfoly.mjs')
+      : join(app.getAppPath(), 'src/adapters/cli/index.ts'),
+    skillsPath: app.isPackaged
+      ? join(process.resourcesPath, 'agent-skills')
+      : join(app.getAppPath(), 'agent-skills'),
+    home: symfolyHome(),
+  }
 }
 
 function createWindow(): void {
@@ -128,6 +171,49 @@ function createTray(): void {
   tray.on('double-click', () => showWindow())
 }
 
+function agentSetupTargets(): SetupTarget[] {
+  const home = homedir()
+  const appData = process.env.APPDATA ?? join(home, 'AppData', 'Roaming')
+  return [
+    {
+      id: 'opencode',
+      label: 'OpenCode',
+      path: join(home, '.config', 'opencode', 'opencode.json'),
+      detect: join(home, '.config', 'opencode'),
+      style: 'opencode',
+    },
+    {
+      id: 'claude-desktop',
+      label: 'Claude Desktop',
+      path: join(appData, 'Claude', 'claude_desktop_config.json'),
+      detect: join(appData, 'Claude'),
+      style: 'mcpServers',
+    },
+    {
+      id: 'claude-code',
+      label: 'Claude Code',
+      path: join(home, '.claude.json'),
+      detect: join(home, '.claude'),
+      style: 'mcpServers',
+    },
+    {
+      id: 'cline',
+      label: 'Cline (VS Code)',
+      path: join(
+        appData,
+        'Code',
+        'User',
+        'globalStorage',
+        'saoudrizwan.claude-dev',
+        'settings',
+        'cline_mcp_settings.json',
+      ),
+      detect: join(appData, 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings'),
+      style: 'mcpServers',
+    },
+  ]
+}
+
 /** Composition root: builds the store, use cases, controllers and the hub. */
 async function bootstrap(): Promise<void> {
   const rooms = new RoomStore()
@@ -167,11 +253,15 @@ async function bootstrap(): Promise<void> {
     getRoomDetail: new GetRoomDetailUseCase(rooms, receiveMessages),
   })
 
+  const connect = buildConnectInfo()
+  const agentSetup = new AgentSetup(agentSetupTargets())
   registerIpc({
     rooms: controller,
     settings,
     hub,
     channel,
+    connect,
+    runAgentSetup: () => agentSetup.run({ command: 'node', args: [connect.mcpPath] }),
     getWindow: () => mainWindow,
     applySettings,
   })

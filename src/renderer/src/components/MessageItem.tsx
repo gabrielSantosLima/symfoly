@@ -20,7 +20,7 @@ export function MessageItem({ message }: { message: ProtocolMessage }) {
           {message.kind}
         </span>
       </div>
-      <p className="mt-0.5 whitespace-pre-wrap text-fg">{message.text}</p>
+      <p className="mt-0.5 whitespace-pre-wrap break-words text-fg">{message.text}</p>
     </li>
   )
 }

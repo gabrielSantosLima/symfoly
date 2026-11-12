@@ -4,25 +4,30 @@ import type { SettingsController } from '../controllers/SettingsController'
 import type { HubHandle } from '../domain/services/HubServer'
 import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
 import type { AppSettingsData } from '../shared/settings'
+import type { ConnectInfo, SetupResult } from '../shared/ipc'
 
 export interface IpcDependencies {
   rooms: RoomsController
   settings: SettingsController
   hub: HubHandle
   channel: string
+  connect: ConnectInfo
+  runAgentSetup: () => SetupResult[]
   getWindow: () => BrowserWindow | null
   applySettings: (settings: AppSettingsData) => void
 }
 
 /** Registers IPC handlers and forwards hub events to the renderer window. */
 export function registerIpc(dependencies: IpcDependencies): void {
-  const { rooms, settings, hub, channel, getWindow, applySettings } = dependencies
+  const { rooms, settings, hub, channel, connect, runAgentSetup, getWindow, applySettings } =
+    dependencies
 
   ipcMain.handle(IPC.status, () => ({
     port: hub.port,
     url: `ws://127.0.0.1:${hub.port}`,
     roomCount: rooms.list().length,
     channel,
+    connect,
   }))
 
   ipcMain.handle(IPC.listRooms, () => rooms.list())
@@ -42,6 +47,7 @@ export function registerIpc(dependencies: IpcDependencies): void {
     applySettings(next)
     return next
   })
+  ipcMain.handle(IPC.setupAgents, () => runAgentSetup())
 
   const forward = (event: HubEvent): void => {
     getWindow()?.webContents.send(IPC.event, event)

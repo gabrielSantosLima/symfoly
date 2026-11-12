@@ -1,17 +1,46 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname, join } from 'node:path'
+import { symfolyHome } from './paths'
 
 export interface Endpoint {
   port: number
   token: string
 }
 
-/** Where the running hub advertises itself so CLI/MCP clients can find it. */
+/** Endpoint file for a channel (production has no suffix). */
 export function defaultEndpointPath(channel = process.env.SYMFOLY_CHANNEL ?? 'production'): string {
-  const base = process.env.SYMFOLY_HOME ?? join(homedir(), '.symfoly')
   const suffix = channel === 'production' ? '' : `-${channel}`
-  return join(base, `endpoint${suffix}.json`)
+  return join(symfolyHome(), `endpoint${suffix}.json`)
+}
+
+/**
+ * Finds the endpoint of a running hub. With a channel, reads that file; without
+ * one, picks the most recently updated `endpoint*.json`, so CLI/MCP clients do
+ * not need to know the channel.
+ */
+export function resolveEndpoint(channel = process.env.SYMFOLY_CHANNEL): Endpoint | undefined {
+  if (channel) return new EndpointStore(defaultEndpointPath(channel)).load()
+
+  const base = symfolyHome()
+  if (!existsSync(base)) return undefined
+  const candidates = readdirSync(base)
+    .filter((name) => /^endpoint.*\.json$/.test(name))
+    .map((name) => ({ path: join(base, name), mtime: statSync(join(base, name)).mtimeMs }))
+    .sort((a, b) => b.mtime - a.mtime)
+
+  for (const candidate of candidates) {
+    const endpoint = new EndpointStore(candidate.path).load()
+    if (endpoint) return endpoint
+  }
+  return undefined
 }
 
 export class EndpointStore {

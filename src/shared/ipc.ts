@@ -10,6 +10,7 @@ export const IPC = {
   roomDetail: 'rooms:detail',
   getSettings: 'settings:get',
   saveSettings: 'settings:save',
+  setupAgents: 'setup:agents',
   event: 'symfoly:event',
 } as const
 
@@ -24,6 +25,25 @@ export interface HubStatus {
   url: string
   roomCount: number
   channel: string
+  connect: ConnectInfo
+}
+
+/** Paths that the Connect view shows so the user can wire an agent up. */
+export interface ConnectInfo {
+  launcher: string
+  cliLauncher: string
+  mcpPath: string
+  cliPath: string
+  skillsPath: string
+  home: string
+}
+
+export interface SetupResult {
+  id: string
+  label: string
+  path: string
+  status: 'created' | 'updated' | 'unchanged' | 'skipped'
+  message?: string
 }
 
 /** Events pushed from the main process to the renderer. */

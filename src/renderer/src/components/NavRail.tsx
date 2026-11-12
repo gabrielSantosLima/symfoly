@@ -1,5 +1,5 @@
 import type { IconType } from 'react-icons'
-import { MdForum, MdInfo, MdSettings, MdSmartToy } from 'react-icons/md'
+import { MdCable, MdForum, MdInfo, MdSettings, MdSmartToy } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
 import type { View } from '../lib/ui'
 import { Logo } from './Logo'
@@ -13,6 +13,7 @@ interface Item {
 const ITEMS: Item[] = [
   { id: 'rooms', label: 'Rooms', icon: MdForum },
   { id: 'agents', label: 'Agents', icon: MdSmartToy },
+  { id: 'connect', label: 'Connect', icon: MdCable },
   { id: 'settings', label: 'Settings', icon: MdSettings },
   { id: 'about', label: 'About', icon: MdInfo },
 ]

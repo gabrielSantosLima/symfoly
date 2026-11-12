@@ -1,4 +1,4 @@
-export type View = 'rooms' | 'agents' | 'settings' | 'about'
+export type View = 'rooms' | 'agents' | 'connect' | 'settings' | 'about'
 
 export const inputClass =
   'rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-muted focus:border-brand'

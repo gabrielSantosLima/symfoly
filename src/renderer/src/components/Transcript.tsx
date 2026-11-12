@@ -24,7 +24,7 @@ export function Transcript() {
   }
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col bg-app">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-app">
       <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
         <div>
           <div className="flex items-center gap-2">

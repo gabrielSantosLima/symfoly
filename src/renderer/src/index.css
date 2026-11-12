@@ -63,7 +63,7 @@
       -apple-system,
       'Segoe UI',
       sans-serif;
-    @apply bg-app text-fg antialiased;
+    @apply overflow-hidden bg-app text-fg antialiased;
   }
 
   :focus-visible {

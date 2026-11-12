@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { SymfolyApi } from '../../shared/api'
 import App from './App'
@@ -16,6 +16,14 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
       url: 'ws://127.0.0.1:4321',
       roomCount: 0,
       channel: 'production',
+      connect: {
+        launcher: '/home/.symfoly/bin/symfoly-mcp.cmd',
+        cliLauncher: '/home/.symfoly/bin/symfoly.cmd',
+        mcpPath: '/app/resources/mcp.mjs',
+        cliPath: '/app/resources/symfoly.mjs',
+        skillsPath: '/app/agent-skills',
+        home: '/home/.symfoly',
+      },
     }),
     getSettings: vi.fn().mockResolvedValue({
       theme: 'system',
@@ -27,6 +35,7 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
       retentionMessagesPerRoom: 1000,
       launchAtLogin: false,
     }),
+    setupAgents: vi.fn().mockResolvedValue([]),
     onEvent: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   }
@@ -56,5 +65,12 @@ describe('App', () => {
     })
     render(<App />)
     expect(await screen.findByText('plan')).toBeInTheDocument()
+  })
+
+  it('shows ready-to-copy agent config on the Connect view', async () => {
+    installApi()
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /Connect/ }))
+    expect((await screen.findAllByText(/mcpServers/)).length).toBeGreaterThan(0)
   })
 })
