@@ -1,16 +1,34 @@
 // @vitest-environment node
 import { afterEach, describe, expect, it } from 'vitest'
-import { createHub, type HubHandle } from './hub'
-import { TestClient } from './test-client'
+import { TestClient } from '../../testing/TestClient'
+import { CloseRoomUseCase } from '../useCases/CloseRoomUseCase'
+import { JoinRoomUseCase } from '../useCases/JoinRoomUseCase'
+import { LeaveRoomUseCase } from '../useCases/LeaveRoomUseCase'
+import { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
+import { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
+import { SendMessageUseCase } from '../useCases/SendMessageUseCase'
+import { createHubServer, type HubHandle } from './HubServer'
+import { RoomStore } from './RoomStore'
 
 const TOKEN = 'test-token'
 const hubs: HubHandle[] = []
 const clients: TestClient[] = []
 
-async function startHub(): Promise<string> {
-  const hub = await createHub({ token: TOKEN, port: 0 })
+async function startHub(): Promise<{ url: string; hub: HubHandle }> {
+  const rooms = new RoomStore()
+  const hub = await createHubServer(
+    {
+      joinRoom: new JoinRoomUseCase(rooms),
+      leaveRoom: new LeaveRoomUseCase(rooms),
+      sendMessage: new SendMessageUseCase(rooms),
+      receiveMessages: new ReceiveMessagesUseCase(rooms),
+      listRooms: new ListRoomsUseCase(rooms),
+      closeRoom: new CloseRoomUseCase(rooms),
+    },
+    { token: TOKEN, port: 0 },
+  )
   hubs.push(hub)
-  return `ws://127.0.0.1:${hub.port}`
+  return { url: `ws://127.0.0.1:${hub.port}`, hub }
 }
 
 async function connect(url: string, name: string): Promise<TestClient> {
@@ -31,9 +49,9 @@ afterEach(async () => {
   await Promise.all(hubs.splice(0).map((hub) => hub.close()))
 })
 
-describe('hub', () => {
+describe('HubServer', () => {
   it('rejects a client with a bad token', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const client = await TestClient.connect(url)
     clients.push(client)
     client.send({ type: 'hello', token: 'wrong', name: 'x', kind: 'agent' })
@@ -42,7 +60,7 @@ describe('hub', () => {
   })
 
   it('delivers a message to a waiting receiver', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     const b = await connect(url, 'b')
     await join(a, 'r1')
@@ -59,7 +77,7 @@ describe('hub', () => {
   })
 
   it('never returns the caller its own messages', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     await join(a, 'r1')
     a.send({ type: 'send', room: 'r1', text: 'mine' })
@@ -71,7 +89,7 @@ describe('hub', () => {
   })
 
   it('returns already-stored history', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     const b = await connect(url, 'b')
     await join(a, 'r1')
@@ -88,7 +106,7 @@ describe('hub', () => {
   })
 
   it('broadcasts presence as agents join and leave', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     await join(a, 'r1')
 
@@ -105,7 +123,7 @@ describe('hub', () => {
   })
 
   it('rejects a send before joining', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     a.send({ type: 'send', room: 'r1', text: 'nope' })
     const error = await a.next('error')
@@ -113,9 +131,23 @@ describe('hub', () => {
   })
 
   it('replies to ping', async () => {
-    const url = await startHub()
+    const { url } = await startHub()
     const a = await connect(url, 'a')
     a.send({ type: 'ping' })
     await expect(a.next('pong')).resolves.toBeDefined()
+  })
+
+  it('notifies participants when the human closes a room', async () => {
+    const { url, hub } = await startHub()
+    const a = await connect(url, 'a')
+    await join(a, 'r1')
+
+    const closed = a.next('closed')
+    hub.closeRoom('r1')
+    expect((await closed).room).toBe('r1')
+
+    a.send({ type: 'send', room: 'r1', text: 'after close' })
+    const error = await a.next('error')
+    expect(error.code).toBe('room_closed')
   })
 })

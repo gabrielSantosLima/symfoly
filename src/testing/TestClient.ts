@@ -9,7 +9,7 @@ interface Waiter {
   timer: NodeJS.Timeout
 }
 
-/** Minimal generic client used by the M0 tests and the two-agent simulation. */
+/** Minimal generic client used by tests and the two-agent simulation. */
 export class TestClient {
   private readonly ws: WebSocket
   private readonly inbox: HubMessage[] = []
