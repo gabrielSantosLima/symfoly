@@ -9,6 +9,7 @@ import { ListRoomsUseCase } from '../../domain/useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../../domain/useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../../domain/useCases/SetRoomPausedUseCase'
+import { DeleteRoomUseCase } from '../../domain/useCases/DeleteRoomUseCase'
 import { GetRoomStateUseCase } from '../../domain/useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../../domain/useCases/TaskUseCase'
 import { HubClient } from '../HubClient'
@@ -29,6 +30,7 @@ async function startHub(): Promise<string> {
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
       setRoomPaused: new SetRoomPausedUseCase(rooms),
+      deleteRoom: new DeleteRoomUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },

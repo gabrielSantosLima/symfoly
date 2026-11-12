@@ -40,6 +40,10 @@ export function registerIpc(dependencies: IpcDependencies): void {
     hub.setRoomPaused(room, paused)
     return true
   })
+  ipcMain.handle(IPC.deleteRoom, (_event, room: string) => {
+    hub.deleteRoom(room)
+    return true
+  })
   ipcMain.handle(IPC.roomDetail, (_event, room: string) => rooms.detail(room))
   ipcMain.handle(IPC.getSettings, () => settings.get())
   ipcMain.handle(IPC.saveSettings, (_event, patch: Partial<AppSettingsData>) => {
@@ -57,4 +61,5 @@ export function registerIpc(dependencies: IpcDependencies): void {
   hub.on('closed', (room) => forward({ type: 'closed', room }))
   hub.on('rooms', () => forward({ type: 'rooms' }))
   hub.on('task', (room) => forward({ type: 'task', room }))
+  hub.on('deleted', (room) => forward({ type: 'deleted', room }))
 }

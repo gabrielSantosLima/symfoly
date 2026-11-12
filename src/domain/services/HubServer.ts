@@ -9,6 +9,7 @@ import type {
 } from '../../shared/protocol'
 import { DomainError } from '../DomainError'
 import type { CloseRoomUseCase } from '../useCases/CloseRoomUseCase'
+import type { DeleteRoomUseCase } from '../useCases/DeleteRoomUseCase'
 import type { JoinRoomUseCase } from '../useCases/JoinRoomUseCase'
 import type { LeaveRoomUseCase } from '../useCases/LeaveRoomUseCase'
 import type { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
@@ -26,6 +27,7 @@ export interface HubServerDependencies {
   listRooms: ListRoomsUseCase
   closeRoom: CloseRoomUseCase
   setRoomPaused: SetRoomPausedUseCase
+  deleteRoom: DeleteRoomUseCase
   task: TaskUseCase
   getRoomState: GetRoomStateUseCase
 }
@@ -49,6 +51,7 @@ export interface HubEvents {
   closed: (room: string) => void
   rooms: () => void
   task: (room: string) => void
+  deleted: (room: string) => void
 }
 
 export interface HubHandle {
@@ -57,6 +60,7 @@ export interface HubHandle {
   on<K extends keyof HubEvents>(event: K, listener: HubEvents[K]): void
   closeRoom(room: string): void
   setRoomPaused(room: string, paused: boolean): void
+  deleteRoom(room: string): void
   close(): Promise<void>
 }
 
@@ -289,6 +293,20 @@ export function createHubServer(
           return
         }
 
+        case 'delete': {
+          if (!dependencies.deleteRoom.execute(message.room)) {
+            fail(socket, 'not_found', message.room)
+            return
+          }
+          for (const other of sessionsIn(message.room)) {
+            send(other.socket, { type: 'closed', room: message.room })
+            other.rooms.delete(message.room)
+          }
+          notify('deleted', message.room)
+          notify('rooms')
+          return
+        }
+
         case 'ping':
           send(socket, { type: 'pong' })
           return
@@ -360,6 +378,15 @@ export function createHubServer(
           if (!result) return
           broadcast(room, { type: 'message', message: result.message })
           notify('message', result.message)
+          notify('rooms')
+        },
+        deleteRoom: (room: string) => {
+          if (!dependencies.deleteRoom.execute(room)) return
+          for (const session of sessionsIn(room)) {
+            send(session.socket, { type: 'closed', room })
+            session.rooms.delete(room)
+          }
+          notify('deleted', room)
           notify('rooms')
         },
         close: () =>

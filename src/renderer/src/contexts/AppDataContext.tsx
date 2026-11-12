@@ -14,6 +14,7 @@ export interface AppData {
   select: (room: string | null) => void
   createRoom: (name: string, brief?: string) => Promise<void>
   closeRoom: () => Promise<void>
+  deleteRoom: () => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
   saveSettings: (patch: Partial<AppSettingsData>) => Promise<void>
 }
@@ -62,6 +63,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         )
       } else if (event.type === 'task') {
         if (selected) void loadDetail(selected)
+      } else if (event.type === 'deleted') {
+        setSelected((current) => (current === event.room ? null : current))
+        void refresh()
       } else {
         void refresh()
       }
@@ -98,6 +102,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await loadDetail(selected)
   }, [client, selected, refresh, loadDetail])
 
+  const deleteRoom = useCallback(async () => {
+    if (!client || !selected) return
+    await client.deleteRoom(selected)
+    setSelected(null)
+    setDetail(null)
+    await refresh()
+  }, [client, selected, refresh])
+
   const setPaused = useCallback(
     async (paused: boolean) => {
       if (!client || !selected) return
@@ -127,6 +139,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     select: setSelected,
     createRoom,
     closeRoom,
+    deleteRoom,
     setPaused,
     saveSettings,
   }

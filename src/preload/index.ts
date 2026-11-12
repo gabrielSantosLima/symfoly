@@ -8,6 +8,7 @@ const api: SymfolyApi = {
   createRoom: (input: CreateRoomRequest) => ipcRenderer.invoke(IPC.createRoom, input),
   closeRoom: (room: string) => ipcRenderer.invoke(IPC.closeRoom, room),
   pauseRoom: (room: string, paused: boolean) => ipcRenderer.invoke(IPC.pauseRoom, room, paused),
+  deleteRoom: (room: string) => ipcRenderer.invoke(IPC.deleteRoom, room),
   getRoomDetail: (room: string) => ipcRenderer.invoke(IPC.roomDetail, room),
   getStatus: () => ipcRenderer.invoke(IPC.status),
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),

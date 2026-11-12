@@ -141,6 +141,10 @@ export class HubClient {
     this.sendRaw({ type: 'leave', room })
   }
 
+  delete(room: string): void {
+    this.sendRaw({ type: 'delete', room })
+  }
+
   send(options: SendOptions): void {
     this.sendRaw({ type: 'send', ...options })
   }

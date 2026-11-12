@@ -98,6 +98,17 @@ export class RoomStore {
     return room
   }
 
+  delete(name: string): boolean {
+    if (!this.rooms.has(name)) return false
+    this.rooms.delete(name)
+    this.participants.delete(name)
+    this.messages.delete(name)
+    this.tasks.delete(name)
+    this.counters.delete(name)
+    this.changed()
+    return true
+  }
+
   count(name: string): number {
     return (this.messages.get(name) ?? []).length
   }

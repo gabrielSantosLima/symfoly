@@ -8,6 +8,7 @@ import { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
+import { DeleteRoomUseCase } from '../useCases/DeleteRoomUseCase'
 import { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../useCases/TaskUseCase'
 import { createHubServer, type HubHandle } from './HubServer'
@@ -28,6 +29,7 @@ async function startHub(): Promise<{ url: string; hub: HubHandle }> {
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
       setRoomPaused: new SetRoomPausedUseCase(rooms),
+      deleteRoom: new DeleteRoomUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },
@@ -169,5 +171,19 @@ describe('HubServer', () => {
     a.send({ type: 'send', room: 'r1', text: 'after pause' })
     const error = await a.next('error')
     expect(error.code).toBe('paused')
+  })
+
+  it('deletes a room and drops its participants', async () => {
+    const { url, hub } = await startHub()
+    const a = await connect(url, 'a')
+    await join(a, 'r1')
+
+    const closed = a.next('closed')
+    hub.deleteRoom('r1')
+    expect((await closed).room).toBe('r1')
+
+    a.send({ type: 'send', room: 'r1', text: 'after delete' })
+    const error = await a.next('error')
+    expect(error.code).toBe('not_joined')
   })
 })

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { MdClose, MdPause, MdPlayArrow } from 'react-icons/md'
+import { MdClose, MdDelete, MdPause, MdPlayArrow } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
 import { roomLabel, roomTone } from '../lib/rooms'
 import { buttonGhostClass } from '../lib/ui'
@@ -7,7 +7,7 @@ import { Badge } from './Badge'
 import { MessageItem } from './MessageItem'
 
 export function Transcript() {
-  const { detail, setPaused, closeRoom } = useAppData()
+  const { detail, setPaused, closeRoom, deleteRoom } = useAppData()
   const endRef = useRef<HTMLDivElement>(null)
   const count = detail?.messages.length ?? 0
 
@@ -38,26 +38,40 @@ export function Transcript() {
             · {detail.messages.length} message(s)
           </p>
         </div>
-        {detail.room.status === 'open' ? (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              className={buttonGhostClass}
-              onClick={() => void setPaused(!detail.room.paused)}
-            >
-              {detail.room.paused ? (
-                <MdPlayArrow className="h-4 w-4" aria-hidden />
-              ) : (
-                <MdPause className="h-4 w-4" aria-hidden />
-              )}
-              {detail.room.paused ? 'Resume' : 'Pause'}
-            </button>
-            <button type="button" className={buttonGhostClass} onClick={() => void closeRoom()}>
-              <MdClose className="h-4 w-4" aria-hidden />
-              Close
-            </button>
-          </div>
-        ) : null}
+        <div className="flex gap-2">
+          {detail.room.status === 'open' ? (
+            <>
+              <button
+                type="button"
+                className={buttonGhostClass}
+                onClick={() => void setPaused(!detail.room.paused)}
+              >
+                {detail.room.paused ? (
+                  <MdPlayArrow className="h-4 w-4" aria-hidden />
+                ) : (
+                  <MdPause className="h-4 w-4" aria-hidden />
+                )}
+                {detail.room.paused ? 'Resume' : 'Pause'}
+              </button>
+              <button type="button" className={buttonGhostClass} onClick={() => void closeRoom()}>
+                <MdClose className="h-4 w-4" aria-hidden />
+                Close
+              </button>
+            </>
+          ) : null}
+          <button
+            type="button"
+            className={buttonGhostClass}
+            onClick={() => {
+              if (window.confirm(`Delete room "${detail.room.name}" and its history?`)) {
+                void deleteRoom()
+              }
+            }}
+          >
+            <MdDelete className="h-4 w-4" aria-hidden />
+            Delete
+          </button>
+        </div>
       </div>
 
       <ol className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-4">

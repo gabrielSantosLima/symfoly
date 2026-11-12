@@ -58,4 +58,14 @@ describe('RoomStore', () => {
     store.append('r1', { senderId: 's1', senderName: 'a', text: 'm5' })
     expect(store.history('r1').map((m) => m.text)).toEqual(['m4', 'm5'])
   })
+
+  it('deletes a room and its contents', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.append('r1', { senderId: 's1', senderName: 'a', text: 'hi' })
+    expect(store.delete('r1')).toBe(true)
+    expect(store.get('r1')).toBeUndefined()
+    expect(store.list()).toHaveLength(0)
+    expect(store.delete('missing')).toBe(false)
+  })
 })

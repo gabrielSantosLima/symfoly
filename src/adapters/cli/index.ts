@@ -32,6 +32,7 @@ function printUsage(): void {
 Commands:
   join <room> --as <name>          Enter a room
   leave <room>                     Leave a room
+  delete <room>                    Delete a room and its history
   send <room> <text> [--to <name>] [--kind chat|task|result] [--expects-reply] [--done]
                                    Send a message to a room
   receive <room> [--since <seq>] [--wait <seconds>]   Wait for new messages
@@ -65,6 +66,11 @@ async function main(): Promise<void> {
 
       case 'leave':
         client.leave(required(positionals[0], 'room'))
+        console.log(JSON.stringify({ ok: true }))
+        break
+
+      case 'delete':
+        client.delete(required(positionals[0], 'room'))
         console.log(JSON.stringify({ ok: true }))
         break
 

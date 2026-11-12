@@ -101,6 +101,8 @@ export interface ClientMessageMap {
   }
   /** Full re-sync snapshot for one room. */
   state: { room: string }
+  /** Remove a room and everything in it. */
+  delete: { room: string }
 }
 
 export type ClientMessage = {
