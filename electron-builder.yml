@@ -9,6 +9,12 @@ files:
   - out/**/*
   - package.json
 
+extraResources:
+  - from: resources/tray.png
+    to: tray.png
+  - from: resources/icon.png
+    to: icon.png
+
 win:
   target:
     - nsis

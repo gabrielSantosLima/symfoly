@@ -1,6 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import {
+  Menu,
+  Tray,
+  app,
+  BrowserWindow,
+  ipcMain,
+  nativeImage,
+  shell,
+  type NativeImage,
+} from 'electron'
 import { RoomsController } from '../controllers/RoomsController'
 import { EndpointStore } from '../domain/services/EndpointStore'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
@@ -20,6 +29,8 @@ import { registerIpc } from './ipc'
 let mainWindow: BrowserWindow | null = null
 let hub: HubHandle | null = null
 let persistence: Persistence | null = null
+let tray: Tray | null = null
+let isQuitting = false
 
 const endpointStore = new EndpointStore()
 
@@ -43,6 +54,13 @@ function createWindow(): void {
     mainWindow = null
   })
 
+  mainWindow.on('close', (event) => {
+    if (!isQuitting && tray) {
+      event.preventDefault()
+      mainWindow?.hide()
+    }
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     void shell.openExternal(details.url)
     return { action: 'deny' }
@@ -53,6 +71,49 @@ function createWindow(): void {
   } else {
     void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+function trayIcon(): NativeImage {
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, 'tray.png'), join(process.resourcesPath, 'icon.png')]
+    : [join(__dirname, '../../resources/tray.png'), join(__dirname, '../../resources/icon.png')]
+  for (const candidate of candidates) {
+    const image = nativeImage.createFromPath(candidate)
+    if (!image.isEmpty()) return image
+  }
+  return nativeImage.createEmpty()
+}
+
+function showWindow(): void {
+  if (!mainWindow) {
+    createWindow()
+    return
+  }
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
+/** Tray icon; closing the window hides it here instead of quitting. */
+function createTray(): void {
+  const image = trayIcon()
+  if (image.isEmpty()) return
+  tray = new Tray(image)
+  tray.setToolTip('Symfoly')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open Symfoly', click: () => showWindow() },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          isQuitting = true
+          app.quit()
+        },
+      },
+    ]),
+  )
+  tray.on('double-click', () => showWindow())
 }
 
 /** Composition root: builds the store, use cases, controllers and the hub. */
@@ -87,6 +148,7 @@ async function bootstrap(): Promise<void> {
   })
 
   registerIpc(controller, hub, () => mainWindow)
+  createTray()
   createWindow()
 }
 
@@ -96,12 +158,16 @@ app.whenReady().then(() => {
   void bootstrap()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    showWindow()
   })
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (isQuitting || !tray) app.quit()
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
 })
 
 app.on('will-quit', () => {

@@ -165,9 +165,10 @@ const resources = join(ROOT, "resources");
 mkdirSync(resources, { recursive: true });
 
 writeFileSync(join(resources, "icon.png"), encodePng(512, render(512)));
+writeFileSync(join(resources, "tray.png"), encodePng(32, render(32)));
 writeFileSync(
   join(resources, "icon.ico"),
   encodeIco([16, 24, 32, 48, 64, 128, 256])
 );
 
-console.log("Wrote resources/icon.png (512) and resources/icon.ico (16–256).");
+console.log("Wrote resources/icon.png (512), tray.png (32) and icon.ico (16–256).");
