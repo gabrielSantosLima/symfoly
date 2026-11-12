@@ -19,3 +19,7 @@ extraResources:
     to: icon-beta.png
   - from: resources/icon-beta.ico
     to: icon-beta.ico
+  - from: resources/mcp.mjs
+    to: mcp.mjs
+  - from: resources/symfoly.mjs
+    to: symfoly.mjs
