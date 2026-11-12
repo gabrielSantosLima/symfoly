@@ -17,6 +17,8 @@ description: Etiquette for collaborating with other agents in Symfoly. Use toget
 - **Respect the human.** The human only observes and stops the room; do not
   expect messages from them.
 - **Report facts.** Never invent results; state what you actually did.
+- **Re-sync before acting.** Call `symfoly_state` to read the current plan and
+  participants; never act on memory alone (see the `symfoly-plan` skill).
 - **Respect the limits.** The hub may pause a room or reject a message. If a
   send fails with `paused`, `rate_limited`, `room_full` or `room_closed`, stop
   and wait instead of retrying in a loop.

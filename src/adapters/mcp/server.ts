@@ -75,6 +75,34 @@ async function main(): Promise<void> {
     async () => textResult(await tools.listRooms()),
   )
 
+  server.registerTool(
+    'symfoly_state',
+    {
+      description:
+        'Re-sync snapshot for a room: participants, the shared task board and the last message cursor. Call this before acting.',
+      inputSchema: { room: z.string() },
+    },
+    async ({ room }) => textResult(await tools.state(room)),
+  )
+
+  server.registerTool(
+    'symfoly_task',
+    {
+      description:
+        'Shared task board. discover a task, claim it (takes a lease), renew the lease, release it, complete it with a result, or verify a done task (by another agent).',
+      inputSchema: {
+        room: z.string(),
+        action: z.enum(['discover', 'claim', 'renew', 'release', 'complete', 'verify']),
+        id: z.string().optional(),
+        title: z.string().optional(),
+        deps: z.array(z.string()).optional(),
+        ttlSeconds: z.number().optional(),
+        result: z.string().optional(),
+      },
+    },
+    async (args) => textResult(await tools.task(args)),
+  )
+
   await server.connect(new StdioServerTransport())
 }
 

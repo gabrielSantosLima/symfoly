@@ -1,6 +1,6 @@
 import type { MessageKind } from '../../shared/protocol'
 import { resolveEndpoint } from '../../domain/services/EndpointStore'
-import { HubClient } from '../HubClient'
+import { HubClient, type TaskRequest } from '../HubClient'
 import { parseArgs, type ParsedArgs } from './args'
 
 function stringFlag(flags: ParsedArgs['flags'], name: string): string | undefined {
@@ -36,6 +36,9 @@ Commands:
                                    Send a message to a room
   receive <room> [--since <seq>] [--wait <seconds>]   Wait for new messages
   receive --all [--since <seq>] [--wait <seconds>]    Wait across joined rooms
+  state <room>                     Re-sync snapshot (participants, tasks, cursor)
+  task <room> <action> [--id <id>] [--title <t>] [--deps a,b] [--ttl <s>] [--result <r>]
+                                   Shared task board (discover|claim|renew|release|complete|verify)
   rooms                            List rooms
 
 Connection:
@@ -91,6 +94,37 @@ async function main(): Promise<void> {
           wait: Number(stringFlag(flags, 'wait') ?? 30),
         })
         console.log(JSON.stringify(messages, null, 2))
+        break
+      }
+
+      case 'state': {
+        const room = required(positionals[0], 'room')
+        await client.join(room)
+        console.log(JSON.stringify(await client.state(room), null, 2))
+        break
+      }
+
+      case 'task': {
+        const room = required(positionals[0], 'room')
+        const action = required(positionals[1], 'action') as TaskRequest['action']
+        const depsFlag = stringFlag(flags, 'deps')
+        const ttlFlag = stringFlag(flags, 'ttl')
+        await client.join(room)
+        const tasks = await client.task({
+          room,
+          action,
+          id: stringFlag(flags, 'id'),
+          title: stringFlag(flags, 'title'),
+          deps: depsFlag
+            ? depsFlag
+                .split(',')
+                .map((part) => part.trim())
+                .filter(Boolean)
+            : undefined,
+          ttlSeconds: ttlFlag ? Number(ttlFlag) : undefined,
+          result: stringFlag(flags, 'result'),
+        })
+        console.log(JSON.stringify(tasks, null, 2))
         break
       }
 

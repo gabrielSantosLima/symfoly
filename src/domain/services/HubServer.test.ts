@@ -8,6 +8,8 @@ import { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
+import { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
+import { TaskUseCase } from '../useCases/TaskUseCase'
 import { createHubServer, type HubHandle } from './HubServer'
 import { RoomStore } from './RoomStore'
 
@@ -26,6 +28,8 @@ async function startHub(): Promise<{ url: string; hub: HubHandle }> {
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
       setRoomPaused: new SetRoomPausedUseCase(rooms),
+      task: new TaskUseCase(rooms),
+      getRoomState: new GetRoomStateUseCase(rooms),
     },
     { token: TOKEN, port: 0 },
   )

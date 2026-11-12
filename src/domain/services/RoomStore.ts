@@ -1,7 +1,9 @@
-import type { ParticipantInfo, ProtocolMessage, RoomInfo } from '../../shared/protocol'
+import type { ParticipantInfo, ProtocolMessage, RoomInfo, TaskInfo } from '../../shared/protocol'
 import { Message, type NewMessage } from '../entities/Message'
 import { Participant, type JoinRoomParticipantInput } from '../entities/Participant'
 import { Room, type CreateRoomInput } from '../entities/Room'
+import { Task, type NewTask } from '../entities/Task'
+import { DomainError } from '../DomainError'
 import type { Snapshot } from './Persistence'
 
 /**
@@ -13,6 +15,7 @@ export class RoomStore {
   private readonly rooms = new Map<string, Room>()
   private readonly participants = new Map<string, Participant[]>()
   private readonly messages = new Map<string, Message[]>()
+  private readonly tasks = new Map<string, Task[]>()
   private readonly counters = new Map<string, number>()
   private readonly listeners = new Set<() => void>()
   private retention = 0
@@ -34,6 +37,7 @@ export class RoomStore {
     this.rooms.set(input.name, room)
     this.participants.set(input.name, [])
     this.messages.set(input.name, [])
+    this.tasks.set(input.name, [])
     this.counters.set(input.name, 0)
     this.changed()
     return room
@@ -122,12 +126,67 @@ export class RoomStore {
       .map((message) => message.toProtocol())
   }
 
+  listTasks(name: string): TaskInfo[] {
+    this.expireLeases(name)
+    return (this.tasks.get(name) ?? []).map((task) => task.toInfo())
+  }
+
+  discoverTask(name: string, input: Omit<NewTask, 'room'>): Task {
+    const list = this.tasks.get(name)
+    if (!list) throw new Error(`room not found: ${name}`)
+    const task = Task.create({ ...input, room: name })
+    list.push(task)
+    this.changed()
+    return task
+  }
+
+  claimTask(name: string, id: string, owner: string, ttlMs: number): Task {
+    const task = this.findTask(name, id)
+    this.expireLeases(name)
+    const missing = task.deps.filter((dep) => !this.findTask(name, dep).isClosed)
+    if (missing.length) {
+      throw new DomainError('deps_pending', `blocked by: ${missing.join(', ')}`)
+    }
+    task.claim(owner, ttlMs)
+    this.changed()
+    return task
+  }
+
+  renewTask(name: string, id: string, owner: string, ttlMs: number): Task {
+    const task = this.findTask(name, id)
+    task.renew(owner, ttlMs)
+    this.changed()
+    return task
+  }
+
+  releaseTask(name: string, id: string, owner: string): Task {
+    const task = this.findTask(name, id)
+    task.release(owner)
+    this.changed()
+    return task
+  }
+
+  completeTask(name: string, id: string, owner: string, result?: string): Task {
+    const task = this.findTask(name, id)
+    task.complete(owner, result)
+    this.changed()
+    return task
+  }
+
+  verifyTask(name: string, id: string, verifier: string): Task {
+    const task = this.findTask(name, id)
+    task.verify(verifier)
+    this.changed()
+    return task
+  }
+
   snapshot(): Snapshot {
     return {
       rooms: [...this.rooms.values()].map((room) => ({
         room: room.toInfo(),
         participants: this.participantsOf(room.name),
         messages: (this.messages.get(room.name) ?? []).map((message) => message.toProtocol()),
+        tasks: (this.tasks.get(room.name) ?? []).map((task) => task.toInfo()),
       })),
     }
   }
@@ -142,11 +201,33 @@ export class RoomStore {
         entry.participants.map((participant) => Participant.fromInfo(participant)),
       )
       this.messages.set(room.name, messages)
+      this.tasks.set(
+        room.name,
+        (entry.tasks ?? []).map((task) => Task.fromInfo(task)),
+      )
       this.counters.set(
         room.name,
         messages.reduce((max, message) => Math.max(max, message.seq), 0),
       )
     }
+  }
+
+  private findTask(name: string, id: string): Task {
+    const task = (this.tasks.get(name) ?? []).find((candidate) => candidate.id === id)
+    if (!task) throw new DomainError('task_not_found', `task ${id} not found in ${name}`)
+    return task
+  }
+
+  private expireLeases(name: string): void {
+    const now = Date.now()
+    let expired = false
+    for (const task of this.tasks.get(name) ?? []) {
+      if (task.isLeaseExpired(now)) {
+        task.expire(now)
+        expired = true
+      }
+    }
+    if (expired) this.changed()
   }
 
   private nextSeq(name: string): number {

@@ -15,6 +15,8 @@ import type { ListRoomsUseCase } from '../useCases/ListRoomsUseCase'
 import type { ReceiveMessagesUseCase } from '../useCases/ReceiveMessagesUseCase'
 import type { SendMessageUseCase } from '../useCases/SendMessageUseCase'
 import type { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
+import type { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
+import type { TaskUseCase } from '../useCases/TaskUseCase'
 
 export interface HubServerDependencies {
   joinRoom: JoinRoomUseCase
@@ -24,6 +26,8 @@ export interface HubServerDependencies {
   listRooms: ListRoomsUseCase
   closeRoom: CloseRoomUseCase
   setRoomPaused: SetRoomPausedUseCase
+  task: TaskUseCase
+  getRoomState: GetRoomStateUseCase
 }
 
 export interface HubServerOptions {
@@ -44,6 +48,7 @@ export interface HubEvents {
   presence: (event: PresenceEvent) => void
   closed: (room: string) => void
   rooms: () => void
+  task: (room: string) => void
 }
 
 export interface HubHandle {
@@ -249,6 +254,40 @@ export function createHubServer(
         case 'rooms':
           send(socket, { type: 'rooms', rooms: dependencies.listRooms.execute() })
           return
+
+        case 'task': {
+          if (!session.rooms.has(message.room)) {
+            fail(socket, 'not_joined', message.room)
+            return
+          }
+          const result = dependencies.task.execute({
+            room: message.room,
+            action: message.action,
+            actor: session.name ?? 'agent',
+            id: message.id,
+            title: message.title,
+            deps: message.deps,
+            ttlSeconds: message.ttlSeconds,
+            result: message.result,
+          })
+          send(socket, { type: 'tasks', room: message.room, tasks: result.tasks })
+          notify('task', message.room)
+          return
+        }
+
+        case 'state': {
+          if (!session.rooms.has(message.room)) {
+            fail(socket, 'not_joined', message.room)
+            return
+          }
+          const state = dependencies.getRoomState.execute(message.room)
+          if (!state) {
+            fail(socket, 'not_found', message.room)
+            return
+          }
+          send(socket, { type: 'state', ...state })
+          return
+        }
 
         case 'ping':
           send(socket, { type: 'pong' })

@@ -7,6 +7,7 @@ import type {
   ParticipantKind,
   ProtocolMessage,
   RoomInfo,
+  TaskInfo,
 } from '../shared/protocol'
 
 export interface HubClientOptions {
@@ -38,9 +39,37 @@ export interface ReceiveOptions {
   wait?: number
 }
 
+export interface TaskRequest {
+  room: string
+  action: 'discover' | 'claim' | 'renew' | 'release' | 'complete' | 'verify'
+  id?: string
+  title?: string
+  deps?: string[]
+  ttlSeconds?: number
+  result?: string
+}
+
+export interface RoomStateResult {
+  room: RoomInfo
+  participants: ParticipantInfo[]
+  tasks: TaskInfo[]
+  lastSeq: number
+}
+
 type PresenceEvent = Extract<HubMessage, { type: 'presence' }>
 type Handler<T> = (payload: T) => void
 type Unsubscribe = () => void
+
+/** Error returned by the hub, carrying its code (already_claimed, paused, ...). */
+export class HubError extends Error {
+  constructor(
+    readonly code: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'HubError'
+  }
+}
 
 interface Waiter {
   match: (message: HubMessage) => boolean
@@ -133,6 +162,30 @@ export class HubClient {
     )
   }
 
+  task(input: TaskRequest): Promise<TaskInfo[]> {
+    this.sendRaw({ type: 'task', ...input })
+    return this.waitFor(
+      (message) => message.type === 'tasks' && message.room === input.room,
+      5000,
+    ).then((message) => (message as Extract<HubMessage, { type: 'tasks' }>).tasks)
+  }
+
+  state(room: string): Promise<RoomStateResult> {
+    this.sendRaw({ type: 'state', room })
+    return this.waitFor(
+      (message) => message.type === 'state' && message.room.name === room,
+      5000,
+    ).then((message) => {
+      const state = message as Extract<HubMessage, { type: 'state' }>
+      return {
+        room: state.room,
+        participants: state.participants,
+        tasks: state.tasks,
+        lastSeq: state.lastSeq,
+      }
+    })
+  }
+
   onMessage(handler: Handler<ProtocolMessage>): Unsubscribe {
     this.messageHandlers.add(handler)
     return () => this.messageHandlers.delete(handler)
@@ -161,6 +214,16 @@ export class HubClient {
   }
 
   private dispatch(message: HubMessage): void {
+    if (message.type === 'error') {
+      const waiter = this.waiters.shift()
+      if (waiter) {
+        clearTimeout(waiter.timer)
+        waiter.reject(new HubError(message.code, message.message))
+        return
+      }
+      this.inbox.push(message)
+      return
+    }
     if (message.type === 'message') {
       this.emit(this.messageHandlers, message.message)
       return

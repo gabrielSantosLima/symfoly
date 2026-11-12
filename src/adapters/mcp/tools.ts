@@ -1,5 +1,5 @@
-import type { ParticipantInfo, ProtocolMessage, RoomInfo } from '../../shared/protocol'
-import type { HubClient, SendOptions } from '../HubClient'
+import type { ParticipantInfo, ProtocolMessage, RoomInfo, TaskInfo } from '../../shared/protocol'
+import type { HubClient, RoomStateResult, SendOptions, TaskRequest } from '../HubClient'
 
 export interface JoinResult {
   room: RoomInfo
@@ -53,5 +53,15 @@ export class SymfolyTools {
 
   listRooms(): Promise<RoomInfo[]> {
     return this.client.rooms()
+  }
+
+  async task(input: TaskRequest): Promise<TaskInfo[]> {
+    if (!this.joined.has(input.room)) await this.join(input.room)
+    return this.client.task(input)
+  }
+
+  async state(room: string): Promise<RoomStateResult> {
+    if (!this.joined.has(room)) await this.join(room)
+    return this.client.state(room)
   }
 }

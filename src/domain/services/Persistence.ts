@@ -1,12 +1,13 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import type { ParticipantInfo, ProtocolMessage, RoomInfo } from '../../shared/protocol'
+import type { ParticipantInfo, ProtocolMessage, RoomInfo, TaskInfo } from '../../shared/protocol'
 import { symfolyHome } from './paths'
 
 export interface RoomSnapshot {
   room: RoomInfo
   participants: ParticipantInfo[]
   messages: ProtocolMessage[]
+  tasks: TaskInfo[]
 }
 
 export interface Snapshot {

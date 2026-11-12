@@ -15,6 +15,7 @@ export class GetRoomDetailUseCase {
       room: entity.toInfo(),
       participants: this.rooms.participantsOf(room),
       messages: this.receive.execute({ rooms: [room] }),
+      tasks: this.rooms.listTasks(room),
     }
   }
 }

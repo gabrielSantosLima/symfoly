@@ -9,6 +9,8 @@ import { ListRoomsUseCase } from '../domain/useCases/ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCase'
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
+import { GetRoomStateUseCase } from '../domain/useCases/GetRoomStateUseCase'
+import { TaskUseCase } from '../domain/useCases/TaskUseCase'
 import { HubClient } from './HubClient'
 
 const TOKEN = 'test-token'
@@ -26,6 +28,8 @@ async function startHub(): Promise<string> {
       listRooms: new ListRoomsUseCase(rooms),
       closeRoom: new CloseRoomUseCase(rooms),
       setRoomPaused: new SetRoomPausedUseCase(rooms),
+      task: new TaskUseCase(rooms),
+      getRoomState: new GetRoomStateUseCase(rooms),
     },
     { token: TOKEN, port: 0 },
   )
@@ -80,5 +84,23 @@ describe('HubClient (two fake agents)', () => {
     await a.join('r1')
     const rooms = await a.rooms()
     expect(rooms.map((room) => room.name)).toContain('r1')
+  })
+
+  it('enforces one owner per task and surfaces the error code', async () => {
+    const url = await startHub()
+    const a = await connect(url, 'a')
+    const b = await connect(url, 'b')
+    await a.join('r1')
+    await b.join('r1')
+
+    const [task] = await a.task({ room: 'r1', action: 'discover', title: 'parser' })
+    await a.task({ room: 'r1', action: 'claim', id: task?.id ?? '', ttlSeconds: 60 })
+
+    await expect(b.task({ room: 'r1', action: 'claim', id: task?.id ?? '' })).rejects.toMatchObject(
+      { code: 'already_claimed' },
+    )
+
+    const state = await b.state('r1')
+    expect(state.tasks.map((entry) => entry.owner)).toEqual(['a'])
   })
 })

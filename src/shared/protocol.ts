@@ -46,6 +46,23 @@ export interface RoomDetail {
   room: RoomInfo
   participants: ParticipantInfo[]
   messages: ProtocolMessage[]
+  tasks: TaskInfo[]
+}
+
+export type TaskStatus = 'open' | 'claimed' | 'blocked' | 'done' | 'verified' | 'closed'
+
+export interface TaskInfo {
+  id: string
+  room: string
+  title: string
+  status: TaskStatus
+  owner: string | null
+  deps: string[]
+  result?: string
+  createdBy: string
+  createdAt: number
+  updatedAt: number
+  leaseExpiresAt?: number
 }
 
 export interface ClientMessageMap {
@@ -72,6 +89,18 @@ export interface ClientMessageMap {
   }
   rooms: Record<never, never>
   ping: Record<never, never>
+  /** Shared task board: discover, claim, renew, release, complete, verify. */
+  task: {
+    room: string
+    action: 'discover' | 'claim' | 'renew' | 'release' | 'complete' | 'verify'
+    id?: string
+    title?: string
+    deps?: string[]
+    ttlSeconds?: number
+    result?: string
+  }
+  /** Full re-sync snapshot for one room. */
+  state: { room: string }
 }
 
 export type ClientMessage = {
@@ -86,6 +115,13 @@ export interface HubMessageMap {
   closed: { room: string }
   rooms: { rooms: RoomInfo[] }
   received: { requestId: string; messages: ProtocolMessage[] }
+  tasks: { room: string; tasks: TaskInfo[] }
+  state: {
+    room: RoomInfo
+    participants: ParticipantInfo[]
+    tasks: TaskInfo[]
+    lastSeq: number
+  }
   error: { code: string; message: string }
   pong: Record<never, never>
 }

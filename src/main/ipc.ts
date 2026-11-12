@@ -56,4 +56,5 @@ export function registerIpc(dependencies: IpcDependencies): void {
   hub.on('presence', (presence) => forward({ type: 'presence', ...presence }))
   hub.on('closed', (room) => forward({ type: 'closed', room }))
   hub.on('rooms', () => forward({ type: 'rooms' }))
+  hub.on('task', (room) => forward({ type: 'task', room }))
 }

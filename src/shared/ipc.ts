@@ -52,3 +52,4 @@ export type HubEvent =
   | { type: 'presence'; room: string; name: string; status: 'joined' | 'left' }
   | { type: 'closed'; room: string }
   | { type: 'rooms' }
+  | { type: 'task'; room: string }

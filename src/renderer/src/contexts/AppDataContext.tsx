@@ -60,11 +60,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             ? { ...current, messages: [...current.messages, message] }
             : current,
         )
+      } else if (event.type === 'task') {
+        if (selected) void loadDetail(selected)
       } else {
         void refresh()
       }
     })
-  }, [client, refresh])
+  }, [client, refresh, selected, loadDetail])
 
   useEffect(() => {
     if (selected) void loadDetail(selected)
