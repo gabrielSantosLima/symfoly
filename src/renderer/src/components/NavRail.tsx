@@ -1,3 +1,5 @@
+import type { IconType } from 'react-icons'
+import { MdForum, MdInfo, MdSettings, MdSmartToy } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
 import type { View } from '../lib/ui'
 import { Logo } from './Logo'
@@ -5,22 +7,14 @@ import { Logo } from './Logo'
 interface Item {
   id: View
   label: string
-  path: string
+  icon: IconType
 }
 
 const ITEMS: Item[] = [
-  { id: 'rooms', label: 'Rooms', path: 'M4 6h16M4 12h16M4 18h10' },
-  {
-    id: 'agents',
-    label: 'Agents',
-    path: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0',
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    path: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm0-11v3m0 12v3M4 12h3m12 0h3',
-  },
-  { id: 'about', label: 'About', path: 'M12 8h.01M11 12h1v5h1' },
+  { id: 'rooms', label: 'Rooms', icon: MdForum },
+  { id: 'agents', label: 'Agents', icon: MdSmartToy },
+  { id: 'settings', label: 'Settings', icon: MdSettings },
+  { id: 'about', label: 'About', icon: MdInfo },
 ]
 
 export function NavRail({ view, onChange }: { view: View; onChange: (view: View) => void }) {
@@ -43,6 +37,7 @@ export function NavRail({ view, onChange }: { view: View; onChange: (view: View)
       <div className="flex flex-1 flex-col gap-1 px-2">
         {ITEMS.map((item) => {
           const active = view === item.id
+          const Icon = item.icon
           return (
             <button
               key={item.id}
@@ -53,17 +48,7 @@ export function NavRail({ view, onChange }: { view: View; onChange: (view: View)
                 active ? 'bg-brand text-brand-fg' : 'text-muted hover:bg-surface-2 hover:text-fg'
               }`}
             >
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d={item.path} />
-              </svg>
+              <Icon className="h-5 w-5" aria-hidden />
               {item.label}
             </button>
           )

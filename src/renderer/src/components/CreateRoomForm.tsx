@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MdAdd } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
 import { buttonClass, inputClass } from '../lib/ui'
 
@@ -33,6 +34,7 @@ export function CreateRoomForm() {
         className={inputClass}
       />
       <button type="submit" className={buttonClass}>
+        <MdAdd className="h-4 w-4" aria-hidden />
         Create room
       </button>
       {error ? <p className="text-xs text-danger">{error}</p> : null}

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { MdClose, MdPause, MdPlayArrow } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
 import { roomLabel, roomTone } from '../lib/rooms'
 import { buttonGhostClass } from '../lib/ui'
@@ -44,9 +45,15 @@ export function Transcript() {
               className={buttonGhostClass}
               onClick={() => void setPaused(!detail.room.paused)}
             >
+              {detail.room.paused ? (
+                <MdPlayArrow className="h-4 w-4" aria-hidden />
+              ) : (
+                <MdPause className="h-4 w-4" aria-hidden />
+              )}
               {detail.room.paused ? 'Resume' : 'Pause'}
             </button>
             <button type="button" className={buttonGhostClass} onClick={() => void closeRoom()}>
+              <MdClose className="h-4 w-4" aria-hidden />
               Close
             </button>
           </div>
