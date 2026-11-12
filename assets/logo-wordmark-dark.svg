@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 204 64" fill="none" role="img" aria-label="Symfoly">
+  <!-- Horizontal lockup — dark background.
+       Mark: hub #818CF8, links #A5B4FC. Wordmark: custom geometric monoline, ink #E2E8F0.
+       Letterforms are paths (no font dependency). -->
+  <g transform="translate(6 10) scale(0.68)">
+    <g stroke="#A5B4FC" stroke-width="5.5" stroke-linecap="round">
+      <path d="M32 32 32 13" />
+      <path d="M32 32 16 42" />
+      <path d="M32 32 48 42" />
+    </g>
+    <circle cx="32" cy="13" r="6" fill="#A5B4FC" />
+    <circle cx="16" cy="42" r="6" fill="#A5B4FC" />
+    <circle cx="48" cy="42" r="6" fill="#A5B4FC" />
+    <circle cx="32" cy="32" r="9" fill="#818CF8" />
+  </g>
+
+  <g stroke="#E2E8F0" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M84 29 C84 26 81 25 78 25 C74 25 72 27 72 30 C72 33 75 34 78 35 C81 36 84 37 84 40 C84 43 82 45 78 45 C74 45 72 43 72 41" />
+    <path d="M92 25 L99 39" />
+    <path d="M106 25 L97 54" />
+    <path d="M112 45 L112 26" />
+    <path d="M112 27 A5 5 0 0 1 122 27 L122 45" />
+    <path d="M122 27 A5 5 0 0 1 132 27 L132 45" />
+    <path d="M149 21 C149 17 146 15 144 17 C142 19 142 22 142 25 L142 45" />
+    <path d="M140 31 L151 31" />
+    <path d="M163.5 25 A7.5 10 0 1 0 163.5 45 A7.5 10 0 1 0 163.5 25 Z" />
+    <path d="M176 18 L176 45" />
+    <path d="M182 25 L189 39" />
+    <path d="M196 25 L187 54" />
+  </g>
+</svg>

@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+  <img src="assets/logo.svg" alt="Symfoly" width="112" />
+</picture>
+
 # Symfoly
 
 Un orquestador de mensajes para difundir mensajes entre agentes

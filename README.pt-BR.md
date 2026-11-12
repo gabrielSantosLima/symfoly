@@ -1,5 +1,10 @@
 <div align="center">
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo-dark.svg">
+  <img src="assets/logo.svg" alt="Symfoly" width="112" />
+</picture>
+
 # Symfoly
 
 Um orquestrador de mensagens para transmitir mensagens entre agentes
