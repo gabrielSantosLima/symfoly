@@ -1,17 +1,44 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import type { SymfolyApi } from '../../shared/api'
 import App from './App'
 
+function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
+  const api: SymfolyApi = {
+    getVersion: vi.fn().mockResolvedValue('0.0.0'),
+    listRooms: vi.fn().mockResolvedValue([]),
+    createRoom: vi.fn(),
+    closeRoom: vi.fn().mockResolvedValue(true),
+    getRoomDetail: vi.fn().mockResolvedValue(undefined),
+    getStatus: vi.fn().mockResolvedValue({ port: 4321, url: 'ws://127.0.0.1:4321', roomCount: 0 }),
+    onEvent: vi.fn().mockReturnValue(() => {}),
+    ...overrides,
+  }
+  window.symfoly = api
+  return api
+}
+
 describe('App', () => {
-  it('renders the product name', () => {
+  it('renders the product name and the hub status', async () => {
+    installApi()
     render(<App />)
     expect(screen.getByRole('heading', { name: 'Symfoly' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByText(/127\.0\.0\.1:4321/)).toBeInTheDocument())
   })
 
-  it('broadcasts a message to the log', () => {
+  it('lists the rooms returned by the API', async () => {
+    installApi({
+      listRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'plan',
+          name: 'plan',
+          status: 'open',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+      ]),
+    })
     render(<App />)
-    fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'hello agents' } })
-    fireEvent.click(screen.getByRole('button', { name: 'Broadcast' }))
-    expect(screen.getByText(/hello agents/)).toBeInTheDocument()
+    expect(await screen.findByText('plan')).toBeInTheDocument()
   })
 })

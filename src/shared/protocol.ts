@@ -41,6 +41,12 @@ export interface RoomInfo {
   closedAt?: number
 }
 
+export interface RoomDetail {
+  room: RoomInfo
+  participants: ParticipantInfo[]
+  messages: ProtocolMessage[]
+}
+
 export interface ClientMessageMap {
   /** First message on every connection. A bad token closes the socket. */
   hello: { token: string; name: string; kind: ParticipantKind }

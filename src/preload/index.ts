@@ -1,8 +1,21 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import type { SymfolyApi } from '../shared/api'
+import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
 
 const api: SymfolyApi = {
   getVersion: () => ipcRenderer.invoke('app:version'),
+  listRooms: () => ipcRenderer.invoke(IPC.listRooms),
+  createRoom: (input: CreateRoomRequest) => ipcRenderer.invoke(IPC.createRoom, input),
+  closeRoom: (room: string) => ipcRenderer.invoke(IPC.closeRoom, room),
+  getRoomDetail: (room: string) => ipcRenderer.invoke(IPC.roomDetail, room),
+  getStatus: () => ipcRenderer.invoke(IPC.status),
+  onEvent: (handler: (event: HubEvent) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: HubEvent): void => handler(payload)
+    ipcRenderer.on(IPC.event, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC.event, listener)
+    }
+  },
 }
 
 contextBridge.exposeInMainWorld('symfoly', api)

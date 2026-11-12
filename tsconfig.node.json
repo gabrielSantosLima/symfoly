@@ -21,6 +21,7 @@
     "src/preload/**/*",
     "src/shared/**/*",
     "src/domain/**/*",
+    "src/controllers/**/*",
     "src/adapters/**/*",
     "src/testing/**/*"
   ]

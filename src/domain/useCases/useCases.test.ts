@@ -4,6 +4,7 @@ import { DomainError } from '../DomainError'
 import { RoomStore } from '../services/RoomStore'
 import { CloseRoomUseCase } from './CloseRoomUseCase'
 import { CreateRoomUseCase } from './CreateRoomUseCase'
+import { GetRoomDetailUseCase } from './GetRoomDetailUseCase'
 import { JoinRoomUseCase } from './JoinRoomUseCase'
 import { ListRoomsUseCase } from './ListRoomsUseCase'
 import { ReceiveMessagesUseCase } from './ReceiveMessagesUseCase'
@@ -11,13 +12,15 @@ import { SendMessageUseCase } from './SendMessageUseCase'
 
 function build() {
   const rooms = new RoomStore()
+  const receive = new ReceiveMessagesUseCase(rooms)
   return {
     createRoom: new CreateRoomUseCase(rooms),
     joinRoom: new JoinRoomUseCase(rooms),
     sendMessage: new SendMessageUseCase(rooms),
-    receive: new ReceiveMessagesUseCase(rooms),
+    receive,
     listRooms: new ListRoomsUseCase(rooms),
     closeRoom: new CloseRoomUseCase(rooms),
+    getRoomDetail: new GetRoomDetailUseCase(rooms, receive),
   }
 }
 
@@ -69,5 +72,17 @@ describe('use cases', () => {
     createRoom.execute({ name: 'r1', createdBy: 'human' })
     createRoom.execute({ name: 'r2', createdBy: 'human' })
     expect(listRooms.execute()).toHaveLength(2)
+  })
+
+  it('returns room detail with participants and history', () => {
+    const { createRoom, joinRoom, sendMessage, getRoomDetail } = build()
+    createRoom.execute({ name: 'r1', createdBy: 'human', brief: 'goal' })
+    joinRoom.execute({ room: 'r1', sessionId: 's1', name: 'a', kind: 'agent' })
+    sendMessage.execute({ room: 'r1', senderId: 's1', senderName: 'a', text: 'hello' })
+    const detail = getRoomDetail.execute('r1')
+    expect(detail?.room.brief).toBe('goal')
+    expect(detail?.participants.map((p) => p.name)).toEqual(['a'])
+    expect(detail?.messages.map((m) => m.text)).toEqual(['hello'])
+    expect(getRoomDetail.execute('missing')).toBeUndefined()
   })
 })

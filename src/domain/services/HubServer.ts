@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { EventEmitter } from 'node:events'
 import { WebSocketServer, WebSocket } from 'ws'
 import type {
   ClientMessage,
@@ -29,9 +30,24 @@ export interface HubServerOptions {
   port?: number
 }
 
+export interface PresenceEvent {
+  room: string
+  name: string
+  status: 'joined' | 'left'
+}
+
+/** Observability hooks for embedding hosts (for example the Electron main). */
+export interface HubEvents {
+  message: (message: ProtocolMessage) => void
+  presence: (event: PresenceEvent) => void
+  closed: (room: string) => void
+  rooms: () => void
+}
+
 export interface HubHandle {
   port: number
   token: string
+  on<K extends keyof HubEvents>(event: K, listener: HubEvents[K]): void
   closeRoom(room: string): void
   close(): Promise<void>
 }
@@ -68,7 +84,12 @@ export function createHubServer(
   options: HubServerOptions,
 ): Promise<HubHandle> {
   const sessions = new Map<string, Session>()
+  const emitter = new EventEmitter()
   const wss = new WebSocketServer({ host: '127.0.0.1', port: options.port ?? 0 })
+
+  function notify<K extends keyof HubEvents>(event: K, ...args: Parameters<HubEvents[K]>): void {
+    emitter.emit(event, ...args)
+  }
 
   function send(socket: WebSocket, message: HubMessage): void {
     if (socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify(message))
@@ -86,6 +107,16 @@ export function createHubServer(
     for (const session of sessionsIn(room)) {
       if (session !== except) send(session.socket, message)
     }
+  }
+
+  function announcePresence(
+    room: string,
+    name: string,
+    status: 'joined' | 'left',
+    except?: Session,
+  ): void {
+    broadcast(room, { type: 'presence', room, name, status }, except)
+    notify('presence', { room, name, status })
   }
 
   function resolveWaiter(session: Session): void {
@@ -149,28 +180,15 @@ export function createHubServer(
           })
           session.rooms.add(message.room)
           send(socket, { type: 'room_state', room: result.room, participants: result.participants })
-          broadcast(
-            message.room,
-            {
-              type: 'presence',
-              room: message.room,
-              name: session.name ?? 'agent',
-              status: 'joined',
-            },
-            session,
-          )
+          announcePresence(message.room, session.name ?? 'agent', 'joined', session)
+          notify('rooms')
           return
         }
 
         case 'leave': {
           dependencies.leaveRoom.execute(message.room, session.id)
           session.rooms.delete(message.room)
-          broadcast(message.room, {
-            type: 'presence',
-            room: message.room,
-            name: session.name ?? 'agent',
-            status: 'left',
-          })
+          announcePresence(message.room, session.name ?? 'agent', 'left', session)
           return
         }
 
@@ -187,6 +205,7 @@ export function createHubServer(
             done: message.done,
           })
           broadcast(message.room, { type: 'message', message: stored })
+          notify('message', stored)
           deliver(stored)
           return
         }
@@ -271,12 +290,7 @@ export function createHubServer(
       }
       for (const room of session.rooms) {
         dependencies.leaveRoom.execute(room, session.id)
-        broadcast(room, {
-          type: 'presence',
-          room,
-          name: session.name ?? 'unknown',
-          status: 'left',
-        })
+        announcePresence(room, session.name ?? 'unknown', 'left', session)
       }
       sessions.delete(session.id)
     })
@@ -289,10 +303,15 @@ export function createHubServer(
       resolve({
         port,
         token: options.token,
+        on: (event, listener) => {
+          emitter.on(event, listener)
+        },
         closeRoom: (room: string) => {
           const closed = dependencies.closeRoom.execute(room)
           if (!closed) return
           broadcast(room, { type: 'closed', room })
+          notify('closed', room)
+          notify('rooms')
         },
         close: () =>
           new Promise<void>((done) => {

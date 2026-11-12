@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-
-const AGENTS = ['alpha', 'bravo', 'charlie']
+import { useCallback, useEffect, useState } from 'react'
+import type { HubEvent, HubStatus } from '../../shared/ipc'
+import type { RoomDetail, RoomInfo } from '../../shared/protocol'
 
 function Logo() {
   return (
@@ -19,22 +19,75 @@ function Logo() {
 }
 
 export default function App() {
+  const api = window.symfoly
   const [version, setVersion] = useState('')
-  const [message, setMessage] = useState('')
-  const [log, setLog] = useState<string[]>([])
+  const [status, setStatus] = useState<HubStatus | null>(null)
+  const [rooms, setRooms] = useState<RoomInfo[]>([])
+  const [selected, setSelected] = useState<string | null>(null)
+  const [detail, setDetail] = useState<RoomDetail | null>(null)
+  const [name, setName] = useState('')
+  const [brief, setBrief] = useState('')
+  const [error, setError] = useState('')
+
+  const refresh = useCallback(async () => {
+    if (!api) return
+    setRooms(await api.listRooms())
+    setStatus(await api.getStatus())
+  }, [api])
+
+  const loadDetail = useCallback(
+    async (room: string) => {
+      if (!api) return
+      setDetail((await api.getRoomDetail(room)) ?? null)
+    },
+    [api],
+  )
 
   useEffect(() => {
-    window.symfoly
-      ?.getVersion()
+    if (!api) return
+    void api
+      .getVersion()
       .then(setVersion)
       .catch(() => setVersion(''))
-  }, [])
+    void refresh()
+    return api.onEvent((event: HubEvent) => {
+      if (event.type === 'message') {
+        const message = event.message
+        setDetail((current) =>
+          current && current.room.name === message.room
+            ? { ...current, messages: [...current.messages, message] }
+            : current,
+        )
+      } else {
+        void refresh()
+      }
+    })
+  }, [api, refresh])
 
-  function broadcast(): void {
-    const text = message.trim()
-    if (!text) return
-    setLog((entries) => [`broadcast -> ${AGENTS.join(', ')}: ${text}`, ...entries])
-    setMessage('')
+  useEffect(() => {
+    if (selected) void loadDetail(selected)
+    else setDetail(null)
+  }, [selected, loadDetail])
+
+  async function create(): Promise<void> {
+    if (!api || !name.trim()) return
+    try {
+      setError('')
+      const room = await api.createRoom({ name: name.trim(), brief: brief.trim() || undefined })
+      setName('')
+      setBrief('')
+      await refresh()
+      setSelected(room.name)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  async function close(): Promise<void> {
+    if (!api || !selected) return
+    await api.closeRoom(selected)
+    await refresh()
+    await loadDetail(selected)
   }
 
   return (
@@ -42,36 +95,97 @@ export default function App() {
       <header>
         <Logo />
         <h1>Symfoly</h1>
-        <p>Broadcast messages between agents.</p>
-        {version ? <span className="version">v{version}</span> : null}
+        <p>Watch agents collaborate in rooms.</p>
+        <span className="version">{version ? `v${version}` : ''}</span>
       </header>
 
-      <section className="compose">
-        <input
-          aria-label="Message"
-          placeholder="Type a message to broadcast"
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') broadcast()
-          }}
-        />
-        <button type="button" onClick={broadcast}>
-          Broadcast
-        </button>
-      </section>
+      <div className="status">
+        {status ? `hub ${status.url} · ${status.roomCount} room(s)` : 'connecting to hub…'}
+      </div>
 
-      <section className="log" aria-label="Broadcast log">
-        {log.length === 0 ? (
-          <p className="empty">No messages yet.</p>
-        ) : (
-          <ul>
-            {log.map((entry, index) => (
-              <li key={`${index}-${entry}`}>{entry}</li>
+      <div className="layout">
+        <aside className="rooms">
+          <form
+            className="create"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void create()
+            }}
+          >
+            <input
+              aria-label="Room name"
+              placeholder="room name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+            <input
+              aria-label="Brief"
+              placeholder="brief (optional)"
+              value={brief}
+              onChange={(event) => setBrief(event.target.value)}
+            />
+            <button type="submit">Create room</button>
+          </form>
+
+          {error ? <p className="error">{error}</p> : null}
+
+          <ul className="room-list">
+            {rooms.map((room) => (
+              <li key={room.id}>
+                <button
+                  type="button"
+                  className={room.id === selected ? 'active' : ''}
+                  onClick={() => setSelected(room.id)}
+                >
+                  <span className="room-name">{room.name}</span>
+                  <span className={`badge ${room.status}`}>{room.status}</span>
+                </button>
+              </li>
             ))}
+            {rooms.length === 0 ? <li className="empty">No rooms yet.</li> : null}
           </ul>
-        )}
-      </section>
+        </aside>
+
+        <section className="transcript">
+          {detail ? (
+            <>
+              <div className="transcript-header">
+                <div>
+                  <strong>{detail.room.name}</strong>
+                  <span className={`badge ${detail.room.status}`}>{detail.room.status}</span>
+                  <div className="participants">
+                    {detail.participants.length
+                      ? detail.participants.map((participant) => participant.name).join(', ')
+                      : 'no participants'}
+                  </div>
+                </div>
+                {detail.room.status === 'open' ? (
+                  <button type="button" onClick={() => void close()}>
+                    Close room
+                  </button>
+                ) : null}
+              </div>
+
+              <ol className="messages">
+                {detail.room.brief ? <li className="system">brief: {detail.room.brief}</li> : null}
+                {detail.messages.map((message) => (
+                  <li key={message.id} className={message.kind}>
+                    <span className="sender">{message.senderName}</span>
+                    {message.to ? <span className="to">→ {message.to}</span> : null}
+                    <span className="kind">{message.kind}</span>
+                    <span className="text">{message.text}</span>
+                  </li>
+                ))}
+                {detail.messages.length === 0 && !detail.room.brief ? (
+                  <li className="empty">No messages yet.</li>
+                ) : null}
+              </ol>
+            </>
+          ) : (
+            <p className="empty">Select a room to watch the conversation.</p>
+          )}
+        </section>
+      </div>
     </div>
   )
 }
