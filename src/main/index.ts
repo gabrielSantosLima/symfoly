@@ -11,10 +11,12 @@ import {
   type NativeImage,
 } from 'electron'
 import { RoomsController } from '../controllers/RoomsController'
+import { SettingsController } from '../controllers/SettingsController'
 import { EndpointStore } from '../domain/services/EndpointStore'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
 import { Persistence } from '../domain/services/Persistence'
 import { RoomStore } from '../domain/services/RoomStore'
+import { SettingsStore } from '../domain/services/SettingsStore'
 import { CloseRoomUseCase } from '../domain/useCases/CloseRoomUseCase'
 import { CreateRoomUseCase } from '../domain/useCases/CreateRoomUseCase'
 import { GetRoomDetailUseCase } from '../domain/useCases/GetRoomDetailUseCase'
@@ -25,6 +27,7 @@ import { ReceiveMessagesUseCase } from '../domain/useCases/ReceiveMessagesUseCas
 import { SendMessageUseCase } from '../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
 import { registerIpc } from './ipc'
+import type { AppSettingsData } from '../shared/settings'
 
 let mainWindow: BrowserWindow | null = null
 let hub: HubHandle | null = null
@@ -126,6 +129,14 @@ async function bootstrap(): Promise<void> {
   if (loaded) rooms.restore(loaded)
   rooms.onChange(() => persistence?.schedule(rooms.snapshot()))
 
+  const settingsStore = new SettingsStore(join(app.getPath('userData'), 'settings.json'))
+  const settings = new SettingsController(settingsStore)
+  const applySettings = (next: AppSettingsData): void => {
+    rooms.setRetention(next.retentionMessagesPerRoom)
+    app.setLoginItemSettings({ openAtLogin: next.launchAtLogin })
+  }
+  applySettings(settings.get())
+
   hub = await createHubServer(
     {
       joinRoom: new JoinRoomUseCase(rooms),
@@ -147,7 +158,7 @@ async function bootstrap(): Promise<void> {
     getRoomDetail: new GetRoomDetailUseCase(rooms, receiveMessages),
   })
 
-  registerIpc(controller, hub, () => mainWindow)
+  registerIpc({ rooms: controller, settings, hub, getWindow: () => mainWindow, applySettings })
   createTray()
   createWindow()
 }

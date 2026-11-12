@@ -1,22 +1,30 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import type { RoomsController } from '../controllers/RoomsController'
+import type { SettingsController } from '../controllers/SettingsController'
 import type { HubHandle } from '../domain/services/HubServer'
 import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
+import type { AppSettingsData } from '../shared/settings'
+
+export interface IpcDependencies {
+  rooms: RoomsController
+  settings: SettingsController
+  hub: HubHandle
+  getWindow: () => BrowserWindow | null
+  applySettings: (settings: AppSettingsData) => void
+}
 
 /** Registers IPC handlers and forwards hub events to the renderer window. */
-export function registerIpc(
-  controller: RoomsController,
-  hub: HubHandle,
-  getWindow: () => BrowserWindow | null,
-): void {
+export function registerIpc(dependencies: IpcDependencies): void {
+  const { rooms, settings, hub, getWindow, applySettings } = dependencies
+
   ipcMain.handle(IPC.status, () => ({
     port: hub.port,
     url: `ws://127.0.0.1:${hub.port}`,
-    roomCount: controller.list().length,
+    roomCount: rooms.list().length,
   }))
 
-  ipcMain.handle(IPC.listRooms, () => controller.list())
-  ipcMain.handle(IPC.createRoom, (_event, input: CreateRoomRequest) => controller.create(input))
+  ipcMain.handle(IPC.listRooms, () => rooms.list())
+  ipcMain.handle(IPC.createRoom, (_event, input: CreateRoomRequest) => rooms.create(input))
   ipcMain.handle(IPC.closeRoom, (_event, room: string) => {
     hub.closeRoom(room)
     return true
@@ -25,7 +33,13 @@ export function registerIpc(
     hub.setRoomPaused(room, paused)
     return true
   })
-  ipcMain.handle(IPC.roomDetail, (_event, room: string) => controller.detail(room))
+  ipcMain.handle(IPC.roomDetail, (_event, room: string) => rooms.detail(room))
+  ipcMain.handle(IPC.getSettings, () => settings.get())
+  ipcMain.handle(IPC.saveSettings, (_event, patch: Partial<AppSettingsData>) => {
+    const next = settings.save(patch)
+    applySettings(next)
+    return next
+  })
 
   const forward = (event: HubEvent): void => {
     getWindow()?.webContents.send(IPC.event, event)

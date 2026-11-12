@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { HubEvent, HubStatus } from '../../shared/ipc'
 import type { RoomDetail, RoomInfo } from '../../shared/protocol'
+import type { AppSettingsData, ThemeMode } from '../../shared/settings'
 
 function Logo() {
   return (
@@ -25,6 +26,7 @@ export default function App() {
   const [rooms, setRooms] = useState<RoomInfo[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [detail, setDetail] = useState<RoomDetail | null>(null)
+  const [settings, setSettings] = useState<AppSettingsData | null>(null)
   const [name, setName] = useState('')
   const [brief, setBrief] = useState('')
   const [error, setError] = useState('')
@@ -49,6 +51,7 @@ export default function App() {
       .getVersion()
       .then(setVersion)
       .catch(() => setVersion(''))
+    void api.getSettings().then(setSettings)
     void refresh()
     return api.onEvent((event: HubEvent) => {
       if (event.type === 'message') {
@@ -68,6 +71,20 @@ export default function App() {
     if (selected) void loadDetail(selected)
     else setDetail(null)
   }, [selected, loadDetail])
+
+  useEffect(() => {
+    if (!settings || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = (): void => {
+      const resolved =
+        settings.theme === 'system' ? (media.matches ? 'dark' : 'light') : settings.theme
+      document.documentElement.dataset.theme = resolved
+    }
+    apply()
+    if (settings.theme !== 'system') return
+    media.addEventListener('change', apply)
+    return () => media.removeEventListener('change', apply)
+  }, [settings])
 
   async function create(): Promise<void> {
     if (!api || !name.trim()) return
@@ -95,6 +112,11 @@ export default function App() {
     await api.pauseRoom(selected, paused)
     await refresh()
     await loadDetail(selected)
+  }
+
+  async function saveSettings(patch: Partial<AppSettingsData>): Promise<void> {
+    if (!api) return
+    setSettings(await api.saveSettings(patch))
   }
 
   return (
@@ -153,6 +175,46 @@ export default function App() {
             ))}
             {rooms.length === 0 ? <li className="empty">No rooms yet.</li> : null}
           </ul>
+
+          {settings ? (
+            <details className="settings">
+              <summary>Settings</summary>
+              <label className="field">
+                <span>Theme</span>
+                <select
+                  value={settings.theme}
+                  onChange={(event) =>
+                    void saveSettings({ theme: event.target.value as ThemeMode })
+                  }
+                >
+                  <option value="system">System</option>
+                  <option value="light">Light</option>
+                  <option value="dark">Dark</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Messages kept per room</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={settings.retentionMessagesPerRoom}
+                  onChange={(event) => {
+                    const value = Number(event.target.value)
+                    if (Number.isFinite(value))
+                      void saveSettings({ retentionMessagesPerRoom: value })
+                  }}
+                />
+              </label>
+              <label className="field checkbox">
+                <input
+                  type="checkbox"
+                  checked={settings.launchAtLogin}
+                  onChange={(event) => void saveSettings({ launchAtLogin: event.target.checked })}
+                />
+                <span>Launch at login</span>
+              </label>
+            </details>
+          ) : null}
         </aside>
 
         <section className="transcript">

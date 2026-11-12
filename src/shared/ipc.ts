@@ -8,6 +8,8 @@ export const IPC = {
   closeRoom: 'rooms:close',
   pauseRoom: 'rooms:pause',
   roomDetail: 'rooms:detail',
+  getSettings: 'settings:get',
+  saveSettings: 'settings:save',
   event: 'symfoly:event',
 } as const
 

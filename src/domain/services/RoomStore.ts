@@ -15,9 +15,16 @@ export class RoomStore {
   private readonly messages = new Map<string, Message[]>()
   private readonly counters = new Map<string, number>()
   private readonly listeners = new Set<() => void>()
+  private retention = 0
 
   onChange(listener: () => void): void {
     this.listeners.add(listener)
+  }
+
+  setRetention(value: number): void {
+    this.retention = value
+    for (const name of this.rooms.keys()) this.trim(name)
+    this.changed()
   }
 
   create(input: CreateRoomInput): Room {
@@ -95,6 +102,7 @@ export class RoomStore {
     if (!this.rooms.has(name)) throw new Error(`room not found: ${name}`)
     const message = Message.create(this.nextSeq(name), { ...input, room: name })
     this.messages.get(name)?.push(message)
+    this.trim(name)
     this.changed()
     return message
   }
@@ -103,6 +111,7 @@ export class RoomStore {
     if (!this.rooms.has(name)) throw new Error(`room not found: ${name}`)
     const message = Message.system(this.nextSeq(name), name, text)
     this.messages.get(name)?.push(message)
+    this.trim(name)
     this.changed()
     return message
   }
@@ -144,6 +153,13 @@ export class RoomStore {
     const seq = (this.counters.get(name) ?? 0) + 1
     this.counters.set(name, seq)
     return seq
+  }
+
+  private trim(name: string): void {
+    if (this.retention <= 0) return
+    const list = this.messages.get(name)
+    if (!list) return
+    while (list.length > this.retention) list.shift()
   }
 
   private changed(): void {

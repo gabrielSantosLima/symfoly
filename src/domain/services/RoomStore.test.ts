@@ -46,4 +46,16 @@ describe('RoomStore', () => {
     expect(store.get('r1')?.isOpen).toBe(false)
     expect(store.get('r1')?.toInfo().closedAt).toBeTypeOf('number')
   })
+
+  it('trims old messages when retention is applied', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    for (let index = 0; index < 5; index++) {
+      store.append('r1', { senderId: 's1', senderName: 'a', text: `m${index}` })
+    }
+    store.setRetention(2)
+    expect(store.history('r1').map((m) => m.text)).toEqual(['m3', 'm4'])
+    store.append('r1', { senderId: 's1', senderName: 'a', text: 'm5' })
+    expect(store.history('r1').map((m) => m.text)).toEqual(['m4', 'm5'])
+  })
 })
