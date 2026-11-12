@@ -50,6 +50,23 @@ export class Message {
     return new Message(randomUUID(), seq, room, 'system', 'system', 'system', text, now)
   }
 
+  static fromProtocol(message: ProtocolMessage): Message {
+    return new Message(
+      message.id,
+      message.seq,
+      message.room,
+      message.senderId ?? 'system',
+      message.senderName ?? 'system',
+      message.kind,
+      message.text,
+      message.ts,
+      message.to,
+      message.ref,
+      message.expectsReply,
+      message.done,
+    )
+  }
+
   toProtocol(): ProtocolMessage {
     return {
       id: this.id,

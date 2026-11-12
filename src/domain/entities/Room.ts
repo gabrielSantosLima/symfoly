@@ -25,6 +25,21 @@ export class Room {
     return new Room(input.name, input.name, input.brief, input.topic, input.createdBy, now, 'open')
   }
 
+  static fromInfo(info: RoomInfo): Room {
+    const room = new Room(
+      info.id,
+      info.name,
+      info.brief,
+      info.topic,
+      info.createdBy,
+      info.createdAt,
+      info.status,
+      info.closedAt,
+    )
+    room.paused = info.paused ?? false
+    return room
+  }
+
   get isOpen(): boolean {
     return this.status === 'open'
   }

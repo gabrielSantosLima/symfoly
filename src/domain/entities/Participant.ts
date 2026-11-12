@@ -20,6 +20,10 @@ export class Participant {
     return new Participant(randomUUID(), input.sessionId, input.name, input.kind, now)
   }
 
+  static fromInfo(info: ParticipantInfo): Participant {
+    return new Participant(info.id, info.sessionId, info.name, info.kind, info.joinedAt)
+  }
+
   toInfo(): ParticipantInfo {
     return {
       id: this.id,

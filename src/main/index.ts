@@ -4,6 +4,7 @@ import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { RoomsController } from '../controllers/RoomsController'
 import { EndpointStore } from '../domain/services/EndpointStore'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
+import { Persistence } from '../domain/services/Persistence'
 import { RoomStore } from '../domain/services/RoomStore'
 import { CloseRoomUseCase } from '../domain/useCases/CloseRoomUseCase'
 import { CreateRoomUseCase } from '../domain/useCases/CreateRoomUseCase'
@@ -18,6 +19,7 @@ import { registerIpc } from './ipc'
 
 let mainWindow: BrowserWindow | null = null
 let hub: HubHandle | null = null
+let persistence: Persistence | null = null
 
 const endpointStore = new EndpointStore()
 
@@ -57,6 +59,11 @@ function createWindow(): void {
 async function bootstrap(): Promise<void> {
   const rooms = new RoomStore()
   const receiveMessages = new ReceiveMessagesUseCase(rooms)
+
+  persistence = new Persistence(join(app.getPath('userData'), 'store.json'))
+  const loaded = persistence.load()
+  if (loaded) rooms.restore(loaded)
+  rooms.onChange(() => persistence?.schedule(rooms.snapshot()))
 
   hub = await createHubServer(
     {
@@ -98,5 +105,6 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  persistence?.flush()
   endpointStore.clear()
 })
