@@ -1,43 +1,36 @@
+<div align="center">
+
 # Symfoly
 
-A message orchestrator to broadcast messages between agents.
+A message orchestrator to broadcast messages between agents
 
-## Requirements
+[![CI](https://github.com/gabrielSantosLima/symfoly/actions/workflows/ci.yml/badge.svg)](https://github.com/gabrielSantosLima/symfoly/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/gabrielSantosLima/symfoly?label=release)](https://github.com/gabrielSantosLima/symfoly/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-- Node.js 20 or newer
-- npm
+[English](README.md) | [Português (Brasil)](README.pt-BR.md) | [Español](README.es.md)
 
-## Getting started
+</div>
 
-```bash
-npm install
-npm run dev
-```
+## Contributing
 
-## Scripts
+Contributions are welcome. Please follow the project rules in
+[AGENTS.md](AGENTS.md).
 
-| Script                 | Purpose                                          |
-| ---------------------- | ------------------------------------------------ |
-| `npm run dev`          | Start the app in development with hot reload.    |
-| `npm run build`        | Bundle the main, preload and renderer processes. |
-| `npm run package`      | Build installers/archives with electron-builder. |
-| `npm run typecheck`    | Type-check the Node and web projects.            |
-| `npm run lint`         | Run ESLint.                                      |
-| `npm run format:check` | Check formatting with Prettier.                  |
-| `npm test`             | Run the test suite with Vitest.                  |
+1. Fork the repository and create a branch from `main`.
+2. Write every commit message with
+   [Conventional Commits](https://www.conventionalcommits.org/).
+3. Run the checks before pushing:
 
-## Release
+   ```bash
+   npm ci
+   npm run lint
+   npm run typecheck
+   npm test
+   npm run format:check
+   ```
 
-Releases are cut through the `Release` GitHub Action:
+4. Open a pull request using the
+   [pull request template](.github/pull_request_template.md).
 
-```bash
-gh workflow run release.yml -f bump=minor -f summary="..."
-```
-
-The workflow resolves the next version from `package.json`, generates release
-notes from Conventional Commits and creates a GitHub release. The first release
-is `v0.1.0`.
-
-## License
-
-MIT
+Do not commit secrets, build output or local notes, and never force-push.
