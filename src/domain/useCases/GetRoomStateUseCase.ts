@@ -1,4 +1,11 @@
-import type { AckInfo, FloorInfo, ParticipantInfo, RoomInfo, TaskInfo } from '../../shared/protocol'
+import type {
+  AckInfo,
+  FloorInfo,
+  ParticipantInfo,
+  RoomInfo,
+  RoomMetrics,
+  TaskInfo,
+} from '../../shared/protocol'
 import type { RoomStore } from '../services/RoomStore'
 
 export interface RoomState {
@@ -7,6 +14,7 @@ export interface RoomState {
   tasks: TaskInfo[]
   acks: AckInfo[]
   floor: FloorInfo
+  metrics: RoomMetrics
   lastSeq: number
 }
 
@@ -25,6 +33,7 @@ export class GetRoomStateUseCase {
       tasks: this.rooms.listTasks(room),
       acks: this.rooms.listAcks(room),
       floor: this.rooms.floorOf(room),
+      metrics: this.rooms.metricsOf(room),
       lastSeq,
     }
   }

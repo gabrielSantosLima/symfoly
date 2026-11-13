@@ -172,6 +172,7 @@ export interface HubMessageMap {
     tasks: TaskInfo[]
     acks: AckInfo[]
     floor: FloorInfo
+    metrics: RoomMetrics
     lastSeq: number
   }
   error: { code: string; message: string }

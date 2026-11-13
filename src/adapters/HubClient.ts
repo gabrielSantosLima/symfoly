@@ -9,6 +9,7 @@ import type {
   ParticipantKind,
   ProtocolMessage,
   RoomInfo,
+  RoomMetrics,
   RoomPhase,
   TaskInfo,
 } from '../shared/protocol'
@@ -59,6 +60,7 @@ export interface RoomStateResult {
   tasks: TaskInfo[]
   acks: AckInfo[]
   floor: FloorInfo
+  metrics: RoomMetrics
   lastSeq: number
 }
 
@@ -193,6 +195,7 @@ export class HubClient {
         tasks: state.tasks,
         acks: state.acks,
         floor: state.floor,
+        metrics: state.metrics,
         lastSeq: state.lastSeq,
       }
     })
