@@ -6,6 +6,7 @@ import type {
   HubMessage,
   ParticipantKind,
   ProtocolMessage,
+  RoomPhase,
 } from '../../shared/protocol'
 import { DomainError } from '../DomainError'
 import type { CloseRoomUseCase } from '../useCases/CloseRoomUseCase'
@@ -20,6 +21,8 @@ import type { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import type { TaskUseCase } from '../useCases/TaskUseCase'
 import type { RenameRoomUseCase } from '../useCases/RenameRoomUseCase'
 import type { AckUseCase } from '../useCases/AckUseCase'
+import type { PhaseUseCase } from '../useCases/PhaseUseCase'
+import type { FloorUseCase } from '../useCases/FloorUseCase'
 
 export interface HubServerDependencies {
   joinRoom: JoinRoomUseCase
@@ -33,6 +36,8 @@ export interface HubServerDependencies {
   renameRoom: RenameRoomUseCase
   task: TaskUseCase
   ack: AckUseCase
+  phase: PhaseUseCase
+  floor: FloorUseCase
   getRoomState: GetRoomStateUseCase
 }
 
@@ -60,6 +65,8 @@ export interface HubEvents {
   deleted: (room: string) => void
   renamed: (from: string, to: string) => void
   ack: (room: string) => void
+  phase: (room: string) => void
+  floor: (room: string) => void
 }
 
 export interface HubHandle {
@@ -70,6 +77,7 @@ export interface HubHandle {
   setRoomPaused(room: string, paused: boolean): void
   deleteRoom(room: string): void
   renameRoom(from: string, to: string): void
+  setRoomPhase(room: string, phase: RoomPhase): void
   close(): Promise<void>
 }
 
@@ -168,6 +176,11 @@ export function createHubServer(
   function broadcastAcks(room: string): void {
     broadcast(room, { type: 'acks', room, acks: dependencies.ack.list(room) })
     notify('ack', room)
+  }
+
+  function broadcastFloor(room: string): void {
+    broadcast(room, { type: 'floor', room, floor: dependencies.floor.list(room) })
+    notify('floor', room)
   }
 
   function handle(session: Session, message: ClientMessage): void {
@@ -336,6 +349,41 @@ export function createHubServer(
         case 'ping':
           send(socket, { type: 'pong' })
           return
+
+        case 'phase': {
+          if (!session.rooms.has(message.room)) {
+            fail(socket, 'not_joined', message.room)
+            return
+          }
+          const room =
+            message.action === 'set' && message.phase
+              ? dependencies.phase.set(message.room, message.phase)
+              : dependencies.phase.advance(message.room)
+          if (!room) {
+            fail(socket, 'not_found', message.room)
+            return
+          }
+          broadcast(message.room, { type: 'phase', room: message.room, phase: room.phase })
+          notify('phase', message.room)
+          return
+        }
+
+        case 'floor': {
+          if (!session.rooms.has(message.room)) {
+            fail(socket, 'not_joined', message.room)
+            return
+          }
+          const actor = session.name ?? 'agent'
+          if (message.action === 'acquire') {
+            dependencies.floor.acquire(message.room, actor, message.ttlSeconds)
+          } else if (message.action === 'renew') {
+            dependencies.floor.renew(message.room, actor, message.ttlSeconds)
+          } else {
+            dependencies.floor.release(message.room, actor)
+          }
+          broadcastFloor(message.room)
+          return
+        }
       }
     } catch (error) {
       if (error instanceof DomainError) {
@@ -356,6 +404,7 @@ export function createHubServer(
     if (expired.length) {
       for (const room of new Set(expired.map((message) => message.room))) broadcastAcks(room)
     }
+    for (const room of dependencies.floor.expire()) broadcastFloor(room)
   }, options.ackSweepMs ?? 1000)
   sweep.unref?.()
 
@@ -436,6 +485,12 @@ export function createHubServer(
           }
           notify('renamed', from, to)
           notify('rooms')
+        },
+        setRoomPhase: (room: string, phase: RoomPhase) => {
+          const result = dependencies.phase.set(room, phase)
+          if (!result) return
+          broadcast(room, { type: 'phase', room, phase: result.phase })
+          notify('phase', room)
         },
         close: () =>
           new Promise<void>((done) => {

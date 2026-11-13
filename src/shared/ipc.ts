@@ -9,6 +9,7 @@ export const IPC = {
   pauseRoom: 'rooms:pause',
   deleteRoom: 'rooms:delete',
   renameRoom: 'rooms:rename',
+  phase: 'rooms:phase',
   roomDetail: 'rooms:detail',
   getSettings: 'settings:get',
   saveSettings: 'settings:save',
@@ -58,3 +59,5 @@ export type HubEvent =
   | { type: 'deleted'; room: string }
   | { type: 'renamed'; from: string; to: string }
   | { type: 'ack'; room: string }
+  | { type: 'phase'; room: string }
+  | { type: 'floor'; room: string }

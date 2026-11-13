@@ -151,6 +151,10 @@ export function Inspector() {
           <dd className="text-right font-semibold">{tasks.length}</dd>
           <dt className="text-muted">Messages</dt>
           <dd className="text-right font-semibold">{messages.length}</dd>
+          <dt className="text-muted">Phase</dt>
+          <dd className="text-right font-semibold">{detail.room.phase}</dd>
+          <dt className="text-muted">Turn</dt>
+          <dd className="text-right font-semibold">{detail.floor.holder ?? 'free'}</dd>
           <dt className="text-muted">Status</dt>
           <dd className="text-right font-semibold">{detail.room.status}</dd>
         </dl>

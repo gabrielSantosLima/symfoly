@@ -2,12 +2,14 @@ import { WebSocket } from 'ws'
 import type {
   AckInfo,
   ClientMessage,
+  FloorInfo,
   HubMessage,
   MessageKind,
   ParticipantInfo,
   ParticipantKind,
   ProtocolMessage,
   RoomInfo,
+  RoomPhase,
   TaskInfo,
 } from '../shared/protocol'
 
@@ -56,6 +58,7 @@ export interface RoomStateResult {
   participants: ParticipantInfo[]
   tasks: TaskInfo[]
   acks: AckInfo[]
+  floor: FloorInfo
   lastSeq: number
 }
 
@@ -189,9 +192,28 @@ export class HubClient {
         participants: state.participants,
         tasks: state.tasks,
         acks: state.acks,
+        floor: state.floor,
         lastSeq: state.lastSeq,
       }
     })
+  }
+
+  phase(room: string, action: 'advance' | 'set', value?: RoomPhase): Promise<RoomPhase> {
+    this.sendRaw({ type: 'phase', room, action, phase: value })
+    return this.waitFor((message) => message.type === 'phase' && message.room === room, 5000).then(
+      (message) => (message as Extract<HubMessage, { type: 'phase' }>).phase,
+    )
+  }
+
+  floor(
+    room: string,
+    action: 'acquire' | 'renew' | 'release',
+    ttlSeconds?: number,
+  ): Promise<FloorInfo> {
+    this.sendRaw({ type: 'floor', room, action, ttlSeconds })
+    return this.waitFor((message) => message.type === 'floor' && message.room === room, 5000).then(
+      (message) => (message as Extract<HubMessage, { type: 'floor' }>).floor,
+    )
   }
 
   onMessage(handler: Handler<ProtocolMessage>): Unsubscribe {

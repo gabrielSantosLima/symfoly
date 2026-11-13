@@ -36,6 +36,8 @@ import { DeleteRoomUseCase } from '../domain/useCases/DeleteRoomUseCase'
 import { GetRoomStateUseCase } from '../domain/useCases/GetRoomStateUseCase'
 import { RenameRoomUseCase } from '../domain/useCases/RenameRoomUseCase'
 import { AckUseCase } from '../domain/useCases/AckUseCase'
+import { PhaseUseCase } from '../domain/useCases/PhaseUseCase'
+import { FloorUseCase } from '../domain/useCases/FloorUseCase'
 import { TaskUseCase } from '../domain/useCases/TaskUseCase'
 import type { AppSettingsData } from '../shared/settings'
 import type { ConnectInfo } from '../shared/ipc'
@@ -249,6 +251,8 @@ async function bootstrap(): Promise<void> {
       deleteRoom: new DeleteRoomUseCase(rooms),
       renameRoom: new RenameRoomUseCase(rooms),
       ack: new AckUseCase(rooms),
+      phase: new PhaseUseCase(rooms),
+      floor: new FloorUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },

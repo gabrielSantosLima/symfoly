@@ -13,6 +13,8 @@ import { SetRoomPausedUseCase } from '../../domain/useCases/SetRoomPausedUseCase
 import { DeleteRoomUseCase } from '../../domain/useCases/DeleteRoomUseCase'
 import { RenameRoomUseCase } from '../../domain/useCases/RenameRoomUseCase'
 import { AckUseCase } from '../../domain/useCases/AckUseCase'
+import { PhaseUseCase } from '../../domain/useCases/PhaseUseCase'
+import { FloorUseCase } from '../../domain/useCases/FloorUseCase'
 import { GetRoomStateUseCase } from '../../domain/useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../../domain/useCases/TaskUseCase'
 
@@ -38,6 +40,8 @@ const hub = await createHubServer(
     deleteRoom: new DeleteRoomUseCase(rooms),
     renameRoom: new RenameRoomUseCase(rooms),
     ack: new AckUseCase(rooms),
+    phase: new PhaseUseCase(rooms),
+    floor: new FloorUseCase(rooms),
     task: new TaskUseCase(rooms),
     getRoomState: new GetRoomStateUseCase(rooms),
   },

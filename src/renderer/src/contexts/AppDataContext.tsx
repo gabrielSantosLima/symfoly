@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import type { HubEvent, HubStatus } from '../../../shared/ipc'
-import type { RoomDetail, RoomInfo } from '../../../shared/protocol'
+import type { RoomDetail, RoomInfo, RoomPhase } from '../../../shared/protocol'
 import type { AppSettingsData } from '../../../shared/settings'
 
 export interface AppData {
@@ -16,6 +16,7 @@ export interface AppData {
   closeRoom: () => Promise<void>
   deleteRoom: () => Promise<void>
   renameRoom: (room: string, name: string) => Promise<void>
+  setPhase: (phase: RoomPhase) => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
   saveSettings: (patch: Partial<AppSettingsData>) => Promise<void>
 }
@@ -71,6 +72,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setSelected((current) => (current === event.from ? event.to : current))
         void refresh()
       } else if (event.type === 'ack') {
+        if (selected === event.room) void loadDetail(event.room)
+      } else if (event.type === 'phase' || event.type === 'floor') {
         if (selected === event.room) void loadDetail(event.room)
       } else {
         void refresh()
@@ -141,6 +144,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     [client, selected, refresh, loadDetail],
   )
 
+  const setPhase = useCallback(
+    async (phase: RoomPhase) => {
+      if (!client || !selected) return
+      await client.setPhase(selected, phase)
+      await refresh()
+      await loadDetail(selected)
+    },
+    [client, selected, refresh, loadDetail],
+  )
+
   const saveSettings = useCallback(
     async (patch: Partial<AppSettingsData>) => {
       if (!client) return
@@ -162,6 +175,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     closeRoom,
     deleteRoom,
     renameRoom,
+    setPhase,
     setPaused,
     saveSettings,
   }

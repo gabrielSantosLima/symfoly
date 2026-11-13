@@ -3,6 +3,7 @@ import type { RoomsController } from '../controllers/RoomsController'
 import type { SettingsController } from '../controllers/SettingsController'
 import type { HubHandle } from '../domain/services/HubServer'
 import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
+import type { RoomPhase } from '../shared/protocol'
 import type { AppSettingsData } from '../shared/settings'
 import type { ConnectInfo, SetupResult } from '../shared/ipc'
 
@@ -48,6 +49,10 @@ export function registerIpc(dependencies: IpcDependencies): void {
     hub.renameRoom(room, name)
     return true
   })
+  ipcMain.handle(IPC.phase, (_event, room: string, phase: RoomPhase) => {
+    hub.setRoomPhase(room, phase)
+    return true
+  })
   ipcMain.handle(IPC.roomDetail, (_event, room: string) => rooms.detail(room))
   ipcMain.handle(IPC.getSettings, () => settings.get())
   ipcMain.handle(IPC.saveSettings, (_event, patch: Partial<AppSettingsData>) => {
@@ -68,4 +73,6 @@ export function registerIpc(dependencies: IpcDependencies): void {
   hub.on('deleted', (room) => forward({ type: 'deleted', room }))
   hub.on('renamed', (from, to) => forward({ type: 'renamed', from, to }))
   hub.on('ack', (room) => forward({ type: 'ack', room }))
+  hub.on('phase', (room) => forward({ type: 'phase', room }))
+  hub.on('floor', (room) => forward({ type: 'floor', room }))
 }

@@ -11,6 +11,8 @@ import { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 import { DeleteRoomUseCase } from '../useCases/DeleteRoomUseCase'
 import { RenameRoomUseCase } from '../useCases/RenameRoomUseCase'
 import { AckUseCase } from '../useCases/AckUseCase'
+import { PhaseUseCase } from '../useCases/PhaseUseCase'
+import { FloorUseCase } from '../useCases/FloorUseCase'
 import { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../useCases/TaskUseCase'
 import { createHubServer, type HubHandle } from './HubServer'
@@ -34,6 +36,8 @@ async function startHub(): Promise<{ url: string; hub: HubHandle }> {
       deleteRoom: new DeleteRoomUseCase(rooms),
       renameRoom: new RenameRoomUseCase(rooms),
       ack: new AckUseCase(rooms),
+      phase: new PhaseUseCase(rooms),
+      floor: new FloorUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },
@@ -255,5 +259,40 @@ describe('HubServer', () => {
     const escalation = await a.next('message', 3000)
     expect(escalation.message.kind).toBe('system')
     expect(escalation.message.text).toContain('no reply from b to a')
+  })
+
+  it('advances the phase when the barrier is met, refusing otherwise', async () => {
+    const { url } = await startHub()
+    const a = await connect(url, 'a')
+    await join(a, 'r1')
+
+    a.send({ type: 'phase', room: 'r1', action: 'advance' })
+    expect((await a.next('error')).code).toBe('barrier_no_plan')
+
+    a.send({ type: 'task', room: 'r1', action: 'discover', title: 't' })
+    await a.next('tasks')
+
+    const advanced = a.next('phase')
+    a.send({ type: 'phase', room: 'r1', action: 'advance' })
+    expect((await advanced).phase).toBe('executing')
+  })
+
+  it('grants the floor to one agent and rejects the other', async () => {
+    const { url } = await startHub()
+    const a = await connect(url, 'a')
+    const b = await connect(url, 'b')
+    await join(a, 'r1')
+    await join(b, 'r1')
+
+    const gotA = a.next('floor')
+    a.send({ type: 'floor', room: 'r1', action: 'acquire', ttlSeconds: 30 })
+    expect((await gotA).floor.holder).toBe('a')
+
+    b.send({ type: 'floor', room: 'r1', action: 'acquire', ttlSeconds: 30 })
+    expect((await b.next('error')).code).toBe('floor_busy')
+
+    const released = a.next('floor')
+    a.send({ type: 'floor', room: 'r1', action: 'release' })
+    expect((await released).floor.holder).toBeNull()
   })
 })

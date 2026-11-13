@@ -13,6 +13,7 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
     pauseRoom: vi.fn().mockResolvedValue(true),
     deleteRoom: vi.fn().mockResolvedValue(true),
     renameRoom: vi.fn().mockResolvedValue(true),
+    setPhase: vi.fn().mockResolvedValue(true),
     getRoomDetail: vi.fn().mockResolvedValue(undefined),
     getStatus: vi.fn().mockResolvedValue({
       port: 4321,
@@ -137,11 +138,19 @@ describe('App', () => {
           { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
         ]),
       getRoomDetail: vi.fn().mockResolvedValue({
-        room: { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        room: {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
         participants: [],
         messages: [],
         tasks: [],
         acks: [],
+        floor: { holder: null },
       }),
     })
     render(<App />)
@@ -157,7 +166,12 @@ describe('App', () => {
 
   it('re-selects the renamed room when the hub reports a rename', async () => {
     const handlers: ((event: HubEvent) => void)[] = []
-    const base = { status: 'open' as const, createdBy: 'human', createdAt: 1 }
+    const base = {
+      status: 'open' as const,
+      phase: 'planning' as const,
+      createdBy: 'human',
+      createdAt: 1,
+    }
     installApi({
       listRooms: vi.fn().mockResolvedValue([{ id: 'r1', name: 'r1', ...base }]),
       getRoomDetail: vi.fn().mockImplementation(async (id: string) => ({
@@ -166,6 +180,7 @@ describe('App', () => {
         messages: [],
         tasks: [],
         acks: [],
+        floor: { holder: null },
       })),
       onEvent: (handler) => {
         handlers.push(handler)
@@ -208,7 +223,14 @@ describe('App', () => {
           { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
         ]),
       getRoomDetail: vi.fn().mockResolvedValue({
-        room: { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        room: {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
         participants: [],
         messages: [],
         tasks: [],
@@ -223,11 +245,47 @@ describe('App', () => {
             status: 'pending',
           },
         ],
+        floor: { holder: null },
       }),
     })
     render(<App />)
     fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
     expect(await screen.findByText('Waiting on')).toBeInTheDocument()
     expect(screen.getByText('b')).toBeInTheDocument()
+  })
+
+  it('shows the room phase and advances it from the header', async () => {
+    const api = installApi({
+      listRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+      ]),
+      getRoomDetail: vi.fn().mockResolvedValue({
+        room: {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+        participants: [],
+        messages: [],
+        tasks: [],
+        acks: [],
+        floor: { holder: null },
+      }),
+    })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'executing' }))
+    await waitFor(() => expect(api.setPhase).toHaveBeenCalledWith('r1', 'executing'))
   })
 })

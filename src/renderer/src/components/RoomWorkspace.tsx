@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { MdClose, MdDelete, MdPause, MdPlayArrow } from 'react-icons/md'
+import { MdChevronRight, MdClose, MdDelete, MdPause, MdPlayArrow } from 'react-icons/md'
 import { useAppData } from '../contexts/AppDataContext'
+import type { RoomPhase } from '../../../shared/protocol'
 import { roomLabel, roomTone } from '../lib/rooms'
 import { buttonGhostClass } from '../lib/ui'
+import type { Tone } from './Badge'
 import { Badge } from './Badge'
 import { Avatar } from './Avatar'
 import { EditableTitle } from './EditableTitle'
@@ -11,8 +13,20 @@ import { MessageItem } from './MessageItem'
 
 type Tab = 'conversation' | 'agents'
 
+const NEXT_PHASE: Record<RoomPhase, RoomPhase | null> = {
+  planning: 'executing',
+  executing: 'review',
+  review: null,
+}
+
+const PHASE_TONE: Record<RoomPhase, Tone> = {
+  planning: 'neutral',
+  executing: 'working',
+  review: 'attention',
+}
+
 export function RoomWorkspace() {
-  const { detail, setPaused, closeRoom, deleteRoom, renameRoom, error } = useAppData()
+  const { detail, setPaused, closeRoom, deleteRoom, renameRoom, setPhase, error } = useAppData()
   const [tab, setTab] = useState<Tab>('conversation')
   const endRef = useRef<HTMLDivElement>(null)
   const count = detail?.messages.length ?? 0
@@ -35,6 +49,7 @@ export function RoomWorkspace() {
                     onCommit={(next) => void renameRoom(detail.room.name, next)}
                   />
                   <Badge tone={roomTone(detail.room)}>{roomLabel(detail.room)}</Badge>
+                  <Badge tone={PHASE_TONE[detail.room.phase]}>{detail.room.phase}</Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted">
                   {detail.participants.length} member(s) · {detail.messages.length} message(s)
@@ -42,6 +57,17 @@ export function RoomWorkspace() {
                 {error ? <p className="mt-1 text-xs text-danger">{error}</p> : null}
               </div>
               <div className="ml-auto flex flex-none gap-1.5">
+                {NEXT_PHASE[detail.room.phase] ? (
+                  <button
+                    type="button"
+                    className={buttonGhostClass}
+                    title="Advance the room phase (human override)"
+                    onClick={() => void setPhase(NEXT_PHASE[detail.room.phase] as RoomPhase)}
+                  >
+                    <MdChevronRight className="h-4 w-4" aria-hidden />
+                    {NEXT_PHASE[detail.room.phase]}
+                  </button>
+                ) : null}
                 {detail.room.status === 'open' ? (
                   <>
                     <button

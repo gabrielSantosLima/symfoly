@@ -1,4 +1,4 @@
-import type { RoomInfo, RoomStatus } from '../../shared/protocol'
+import type { RoomInfo, RoomPhase, RoomStatus } from '../../shared/protocol'
 
 export interface CreateRoomInput {
   name: string
@@ -9,6 +9,7 @@ export interface CreateRoomInput {
 
 export class Room {
   private paused = false
+  private phase: RoomPhase = 'planning'
 
   private constructor(
     readonly id: string,
@@ -37,6 +38,7 @@ export class Room {
       info.closedAt,
     )
     room.paused = info.paused ?? false
+    room.phase = info.phase ?? 'planning'
     return room
   }
 
@@ -52,6 +54,10 @@ export class Room {
     this.paused = value
   }
 
+  setPhase(phase: RoomPhase): void {
+    this.phase = phase
+  }
+
   close(now = Date.now()): void {
     if (!this.isOpen) return
     this.status = 'closed'
@@ -65,6 +71,7 @@ export class Room {
       topic: this.topic,
       brief: this.brief,
       status: this.status,
+      phase: this.phase,
       createdBy: this.createdBy,
       createdAt: this.createdAt,
       closedAt: this.closedOn,

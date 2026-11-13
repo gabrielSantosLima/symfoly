@@ -40,6 +40,9 @@ Commands:
   state <room>                     Re-sync snapshot (participants, tasks, cursor)
   task <room> <action> [--id <id>] [--title <t>] [--deps a,b] [--ttl <s>] [--result <r>]
                                    Shared task board (discover|claim|renew|release|complete|verify)
+  phase <room>                     Advance the room phase (barrier-checked)
+  floor <room> <acquire|renew|release> [--ttl <s>]
+                                   Take / keep / release the single-speaker turn
   rooms                            List rooms
 
 Connection:
@@ -139,6 +142,24 @@ async function main(): Promise<void> {
       case 'rooms':
         console.log(JSON.stringify(await client.rooms(), null, 2))
         break
+
+      case 'phase': {
+        const room = required(positionals[0], 'room')
+        await client.join(room)
+        console.log(JSON.stringify(await client.phase(room, 'advance'), null, 2))
+        break
+      }
+
+      case 'floor': {
+        const room = required(positionals[0], 'room')
+        const action = required(positionals[1], 'action') as 'acquire' | 'renew' | 'release'
+        const ttl = stringFlag(flags, 'ttl')
+        await client.join(room)
+        console.log(
+          JSON.stringify(await client.floor(room, action, ttl ? Number(ttl) : undefined), null, 2),
+        )
+        break
+      }
 
       default:
         printUsage()

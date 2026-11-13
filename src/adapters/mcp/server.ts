@@ -104,6 +104,30 @@ async function main(): Promise<void> {
     async (args) => textResult(await tools.task(args)),
   )
 
+  server.registerTool(
+    'symfoly_phase',
+    {
+      description:
+        'Room phase barrier: advance from planning to executing (needs a task) then to review (needs all tasks closed).',
+      inputSchema: { room: z.string() },
+    },
+    async ({ room }) => textResult(await tools.phase(room)),
+  )
+
+  server.registerTool(
+    'symfoly_floor',
+    {
+      description:
+        'Single-speaker turn: acquire the floor before acting, renew to keep it, release when done. Fails with floor_busy if someone else holds it.',
+      inputSchema: {
+        room: z.string(),
+        action: z.enum(['acquire', 'renew', 'release']),
+        ttlSeconds: z.number().optional(),
+      },
+    },
+    async ({ room, action, ttlSeconds }) => textResult(await tools.floor(room, action, ttlSeconds)),
+  )
+
   await server.connect(new StdioServerTransport())
 }
 

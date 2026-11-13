@@ -1,5 +1,5 @@
 import type { CreateRoomRequest, HubEvent, HubStatus, SetupResult } from './ipc'
-import type { RoomDetail, RoomInfo } from './protocol'
+import type { RoomDetail, RoomInfo, RoomPhase } from './protocol'
 import type { AppSettingsData } from './settings'
 
 export interface SymfolyApi {
@@ -10,6 +10,7 @@ export interface SymfolyApi {
   pauseRoom: (room: string, paused: boolean) => Promise<boolean>
   deleteRoom: (room: string) => Promise<boolean>
   renameRoom: (room: string, name: string) => Promise<boolean>
+  setPhase: (room: string, phase: RoomPhase) => Promise<boolean>
   getRoomDetail: (room: string) => Promise<RoomDetail | undefined>
   getStatus: () => Promise<HubStatus>
   getSettings: () => Promise<AppSettingsData>

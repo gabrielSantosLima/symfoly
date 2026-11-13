@@ -1,4 +1,11 @@
-import type { ParticipantInfo, ProtocolMessage, RoomInfo, TaskInfo } from '../../shared/protocol'
+import type {
+  FloorInfo,
+  ParticipantInfo,
+  ProtocolMessage,
+  RoomInfo,
+  RoomPhase,
+  TaskInfo,
+} from '../../shared/protocol'
 import type { HubClient, RoomStateResult, SendOptions, TaskRequest } from '../HubClient'
 
 export interface JoinResult {
@@ -63,5 +70,19 @@ export class SymfolyTools {
   async state(room: string): Promise<RoomStateResult> {
     if (!this.joined.has(room)) await this.join(room)
     return this.client.state(room)
+  }
+
+  async phase(room: string, action: 'advance' = 'advance'): Promise<RoomPhase> {
+    if (!this.joined.has(room)) await this.join(room)
+    return this.client.phase(room, action)
+  }
+
+  async floor(
+    room: string,
+    action: 'acquire' | 'renew' | 'release',
+    ttlSeconds?: number,
+  ): Promise<FloorInfo> {
+    if (!this.joined.has(room)) await this.join(room)
+    return this.client.floor(room, action, ttlSeconds)
   }
 }

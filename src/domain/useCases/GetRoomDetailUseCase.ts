@@ -17,6 +17,7 @@ export class GetRoomDetailUseCase {
       messages: this.receive.execute({ rooms: [room] }),
       tasks: this.rooms.listTasks(room),
       acks: this.rooms.listAcks(room),
+      floor: this.rooms.floorOf(room),
     }
   }
 }

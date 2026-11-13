@@ -1,8 +1,10 @@
 import type {
   AckInfo,
+  FloorInfo,
   ParticipantInfo,
   ProtocolMessage,
   RoomInfo,
+  RoomPhase,
   TaskInfo,
 } from '../../shared/protocol'
 import { Message, type NewMessage } from '../entities/Message'
@@ -23,6 +25,7 @@ export class RoomStore {
   private readonly messages = new Map<string, Message[]>()
   private readonly tasks = new Map<string, Task[]>()
   private readonly acks = new Map<string, AckInfo[]>()
+  private readonly floors = new Map<string, { holder: string; expiresAt: number }>()
   private readonly counters = new Map<string, number>()
   private readonly listeners = new Set<() => void>()
   private retention = 0
@@ -46,6 +49,7 @@ export class RoomStore {
     this.messages.set(input.name, [])
     this.tasks.set(input.name, [])
     this.acks.set(input.name, [])
+    this.floors.delete(input.name)
     this.counters.set(input.name, 0)
     this.changed()
     return room
@@ -114,6 +118,7 @@ export class RoomStore {
     this.tasks.delete(name)
     this.counters.delete(name)
     this.acks.delete(name)
+    this.floors.delete(name)
     this.changed()
     return true
   }
@@ -153,6 +158,10 @@ export class RoomStore {
       (this.acks.get(from) ?? []).map((ack) => ({ ...ack, room: to })),
     )
     this.acks.delete(from)
+
+    const floor = this.floors.get(from)
+    this.floors.delete(from)
+    if (floor) this.floors.set(to, floor)
 
     this.counters.set(to, this.counters.get(from) ?? 0)
     this.counters.delete(from)
@@ -293,6 +302,61 @@ export class RoomStore {
     }
     if (expired.length) this.changed()
     return expired
+  }
+
+  setPhase(name: string, phase: RoomPhase): Room | undefined {
+    const room = this.rooms.get(name)
+    if (!room) return undefined
+    room.setPhase(phase)
+    this.changed()
+    return room
+  }
+
+  floorOf(name: string): FloorInfo {
+    const floor = this.floors.get(name)
+    if (!floor || floor.expiresAt <= Date.now()) return { holder: null }
+    return { holder: floor.holder, expiresAt: floor.expiresAt }
+  }
+
+  acquireFloor(name: string, holder: string, ttlMs: number): FloorInfo {
+    const current = this.floorOf(name)
+    if (current.holder && current.holder !== holder) {
+      throw new DomainError('floor_busy', `floor held by ${current.holder}`)
+    }
+    const expiresAt = Date.now() + ttlMs
+    this.floors.set(name, { holder, expiresAt })
+    this.changed()
+    return { holder, expiresAt }
+  }
+
+  renewFloor(name: string, holder: string, ttlMs: number): FloorInfo {
+    const current = this.floorOf(name)
+    if (current.holder !== holder) {
+      throw new DomainError('floor_not_held', `floor is not held by ${holder}`)
+    }
+    const expiresAt = Date.now() + ttlMs
+    this.floors.set(name, { holder, expiresAt })
+    this.changed()
+    return { holder, expiresAt }
+  }
+
+  releaseFloor(name: string, holder: string): FloorInfo {
+    if (this.floorOf(name).holder === holder) this.floors.delete(name)
+    this.changed()
+    return { holder: null }
+  }
+
+  /** Drops expired floors and returns the rooms that changed. */
+  expireFloors(now = Date.now()): string[] {
+    const changedRooms: string[] = []
+    for (const [room, floor] of this.floors) {
+      if (floor.expiresAt <= now) {
+        this.floors.delete(room)
+        changedRooms.push(room)
+      }
+    }
+    if (changedRooms.length) this.changed()
+    return changedRooms
   }
 
   snapshot(): Snapshot {

@@ -30,12 +30,21 @@ export interface ParticipantInfo {
   joinedAt: number
 }
 
+export type RoomPhase = 'planning' | 'executing' | 'review'
+
+/** Who currently holds the single-speaker turn in a room (null = free). */
+export interface FloorInfo {
+  holder: string | null
+  expiresAt?: number
+}
+
 export interface RoomInfo {
   id: string
   name: string
   topic?: string
   brief?: string
   status: RoomStatus
+  phase: RoomPhase
   createdBy: string
   createdAt: number
   closedAt?: number
@@ -48,6 +57,7 @@ export interface RoomDetail {
   messages: ProtocolMessage[]
   tasks: TaskInfo[]
   acks: AckInfo[]
+  floor: FloorInfo
 }
 
 export type TaskStatus = 'open' | 'claimed' | 'blocked' | 'done' | 'verified' | 'closed'
@@ -120,6 +130,10 @@ export interface ClientMessageMap {
   state: { room: string }
   /** Remove a room and everything in it. */
   delete: { room: string }
+  /** Phase barrier: agents request `advance`; `set` overrides. */
+  phase: { room: string; action: 'advance' | 'set'; phase?: RoomPhase }
+  /** Single-speaker turn (floor) within a room. */
+  floor: { room: string; action: 'acquire' | 'renew' | 'release'; ttlSeconds?: number }
 }
 
 export type ClientMessage = {
@@ -136,11 +150,14 @@ export interface HubMessageMap {
   received: { requestId: string; messages: ProtocolMessage[] }
   tasks: { room: string; tasks: TaskInfo[] }
   acks: { room: string; acks: AckInfo[] }
+  phase: { room: string; phase: RoomPhase }
+  floor: { room: string; floor: FloorInfo }
   state: {
     room: RoomInfo
     participants: ParticipantInfo[]
     tasks: TaskInfo[]
     acks: AckInfo[]
+    floor: FloorInfo
     lastSeq: number
   }
   error: { code: string; message: string }

@@ -156,4 +156,40 @@ describe('RoomStore', () => {
     expect(store.listAcks('r2')[0]?.room).toBe('r2')
     expect(store.listAcks('r1')).toHaveLength(0)
   })
+
+  it('starts rooms in the planning phase and lets the phase change', () => {
+    const store = new RoomStore()
+    const room = store.create({ name: 'r1', createdBy: 'human' })
+    expect(room.toInfo().phase).toBe('planning')
+    store.setPhase('r1', 'executing')
+    expect(store.get('r1')?.toInfo().phase).toBe('executing')
+  })
+
+  it('serializes the floor between two holders', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.acquireFloor('r1', 'a', 10_000)
+    expect(store.floorOf('r1').holder).toBe('a')
+    expect(() => store.acquireFloor('r1', 'b', 10_000)).toThrow()
+    store.releaseFloor('r1', 'a')
+    expect(store.floorOf('r1').holder).toBeNull()
+    store.acquireFloor('r1', 'b', 10_000)
+    expect(store.floorOf('r1').holder).toBe('b')
+  })
+
+  it('expires the floor when its lease passes', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.acquireFloor('r1', 'a', -1)
+    expect(store.floorOf('r1').holder).toBeNull()
+    expect(store.expireFloors()).toEqual(['r1'])
+  })
+
+  it('keeps the floor across a rename', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.acquireFloor('r1', 'a', 10_000)
+    store.rename('r1', 'r2')
+    expect(store.floorOf('r2').holder).toBe('a')
+  })
 })
