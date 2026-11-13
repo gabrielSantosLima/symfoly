@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { symfolyHome } from './paths'
 
@@ -20,8 +20,14 @@ export class Launchers {
     mkdirSync(this.dir, { recursive: true })
     writeFileSync(join(this.dir, 'symfoly-mcp.cmd'), cmd(targets.mcp))
     writeFileSync(join(this.dir, 'symfoly.cmd'), cmd(targets.cli))
-    writeFileSync(join(this.dir, 'symfoly-mcp'), sh(targets.mcp))
-    writeFileSync(join(this.dir, 'symfoly'), sh(targets.cli))
+    const mcpSh = join(this.dir, 'symfoly-mcp')
+    const cliSh = join(this.dir, 'symfoly')
+    writeFileSync(mcpSh, sh(targets.mcp))
+    writeFileSync(cliSh, sh(targets.cli))
+    if (process.platform !== 'win32') {
+      chmodSync(mcpSh, 0o755)
+      chmodSync(cliSh, 0o755)
+    }
     return this.dir
   }
 }

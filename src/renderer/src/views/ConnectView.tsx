@@ -46,12 +46,12 @@ export function ConnectView() {
   }
 
   const recommended = JSON.stringify(
-    { mcpServers: { symfoly: { command: 'node', args: [connect.mcpPath] } } },
+    { mcpServers: { symfoly: { command: connect.launcher } } },
     null,
     2,
   )
-  const launcher = JSON.stringify(
-    { mcpServers: { symfoly: { command: connect.launcher } } },
+  const manual = JSON.stringify(
+    { mcpServers: { symfoly: { command: 'node', args: [connect.mcpPath] } } },
     null,
     2,
   )
@@ -102,13 +102,13 @@ export function ConnectView() {
 
         <Block
           title="Generic MCP"
-          hint="Paste this into any MCP client. No channel needed — the running hub is detected automatically."
+          hint="Paste into any MCP client. The launcher runs the MCP with the app's own runtime — no Node install needed."
           code={recommended}
         />
         <Block
-          title="Launcher shim"
-          hint="Short, stable path written on every launch."
-          code={launcher}
+          title="Manual (Node)"
+          hint="Direct command; requires Node on PATH. The path lives in ~/.symfoly/bin and is stable."
+          code={manual}
         />
         <Block title="CLI" hint="For agents that only run shell commands." code={cli} />
         <Block

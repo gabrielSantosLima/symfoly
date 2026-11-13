@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { existsSync } from 'node:fs'
+import { copyFileSync, cpSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -16,7 +16,8 @@ import {
 import { RoomsController } from '../controllers/RoomsController'
 import { SettingsController } from '../controllers/SettingsController'
 import { EndpointStore, defaultEndpointPath } from '../domain/services/EndpointStore'
-import { AgentSetup, type SetupTarget } from '../domain/services/AgentSetup'
+import { AgentSetup } from '../domain/services/AgentSetup'
+import { agentSetupTargets } from '../domain/services/agentTargets'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
 import { Launchers, type LauncherSpec } from '../domain/services/Launchers'
 import { Persistence } from '../domain/services/Persistence'
@@ -69,38 +70,72 @@ function trayIcon(): NativeImage {
   return image.resize({ width: 16, height: 16 })
 }
 
-/** Spec used both for the launcher shims and the Connect view. */
-function adapterSpec(bundled: string, sourceRelativePath: string): LauncherSpec {
-  const bundledPath = resourcePath(bundled)
-  if (app.isPackaged || existsSync(bundledPath)) {
-    return { command: process.execPath, args: [bundledPath] }
-  }
+/** The Electron binary can run as plain Node; under AppImage point at the file. */
+function runtimeCommand(): string {
+  return process.env.APPIMAGE ?? process.execPath
+}
+
+function devSpec(sourceRelativePath: string): LauncherSpec {
+  const source = join(app.getAppPath(), sourceRelativePath)
   try {
     const require = createRequire(import.meta.url)
     const tsx = join(dirname(require.resolve('tsx/package.json')), 'dist', 'cli.mjs')
-    return { command: process.execPath, args: [tsx, join(app.getAppPath(), sourceRelativePath)] }
+    return { command: process.execPath, args: [tsx, source] }
   } catch {
-    return { command: process.execPath, args: [join(app.getAppPath(), sourceRelativePath)] }
+    return { command: process.execPath, args: [source] }
+  }
+}
+
+interface StableAdapters {
+  mcp: string
+  cli: string
+  skills: string
+}
+
+/**
+ * Copies the bundled adapters into a stable folder. An AppImage runs from a
+ * transient mount, so `process.resourcesPath` does not survive a restart;
+ * `~/.symfoly/bin` does.
+ */
+function materializeAdapters(): StableAdapters {
+  const fallback: StableAdapters = {
+    mcp: resourcePath('mcp.mjs'),
+    cli: resourcePath('symfoly.mjs'),
+    skills: join(process.resourcesPath, 'agent-skills'),
+  }
+  if (!app.isPackaged) return fallback
+  try {
+    const dir = join(symfolyHome(), 'bin')
+    mkdirSync(dir, { recursive: true })
+    const mcp = join(dir, 'mcp.mjs')
+    const cli = join(dir, 'symfoly.mjs')
+    const skills = join(dir, 'agent-skills')
+    copyFileSync(resourcePath('mcp.mjs'), mcp)
+    copyFileSync(resourcePath('symfoly.mjs'), cli)
+    cpSync(resourcePath('agent-skills'), skills, { recursive: true, force: true })
+    return { mcp, cli, skills }
+  } catch {
+    return fallback
   }
 }
 
 function buildConnectInfo(): ConnectInfo {
-  const launcherDir = new Launchers().write({
-    mcp: adapterSpec('mcp.mjs', 'src/adapters/mcp/server.ts'),
-    cli: adapterSpec('symfoly.mjs', 'src/adapters/cli/index.ts'),
-  })
+  const stable = materializeAdapters()
+  const bundled = app.isPackaged
+  const mcpSpec: LauncherSpec = bundled
+    ? { command: runtimeCommand(), args: [stable.mcp] }
+    : devSpec('src/adapters/mcp/server.ts')
+  const cliSpec: LauncherSpec = bundled
+    ? { command: runtimeCommand(), args: [stable.cli] }
+    : devSpec('src/adapters/cli/index.ts')
+  const launcherDir = new Launchers().write({ mcp: mcpSpec, cli: cliSpec })
+  const isWindows = process.platform === 'win32'
   return {
-    launcher: join(launcherDir, 'symfoly-mcp.cmd'),
-    cliLauncher: join(launcherDir, 'symfoly.cmd'),
-    mcpPath: app.isPackaged
-      ? resourcePath('mcp.mjs')
-      : join(app.getAppPath(), 'src/adapters/mcp/server.ts'),
-    cliPath: app.isPackaged
-      ? resourcePath('symfoly.mjs')
-      : join(app.getAppPath(), 'src/adapters/cli/index.ts'),
-    skillsPath: app.isPackaged
-      ? join(process.resourcesPath, 'agent-skills')
-      : join(app.getAppPath(), 'agent-skills'),
+    launcher: join(launcherDir, isWindows ? 'symfoly-mcp.cmd' : 'symfoly-mcp'),
+    cliLauncher: join(launcherDir, isWindows ? 'symfoly.cmd' : 'symfoly'),
+    mcpPath: bundled ? stable.mcp : join(app.getAppPath(), 'src/adapters/mcp/server.ts'),
+    cliPath: bundled ? stable.cli : join(app.getAppPath(), 'src/adapters/cli/index.ts'),
+    skillsPath: bundled ? stable.skills : join(app.getAppPath(), 'agent-skills'),
     home: symfolyHome(),
   }
 }
@@ -178,49 +213,6 @@ function createTray(): void {
   tray.on('double-click', () => showWindow())
 }
 
-function agentSetupTargets(): SetupTarget[] {
-  const home = homedir()
-  const appData = process.env.APPDATA ?? join(home, 'AppData', 'Roaming')
-  return [
-    {
-      id: 'opencode',
-      label: 'OpenCode',
-      path: join(home, '.config', 'opencode', 'opencode.json'),
-      detect: join(home, '.config', 'opencode'),
-      style: 'opencode',
-    },
-    {
-      id: 'claude-desktop',
-      label: 'Claude Desktop',
-      path: join(appData, 'Claude', 'claude_desktop_config.json'),
-      detect: join(appData, 'Claude'),
-      style: 'mcpServers',
-    },
-    {
-      id: 'claude-code',
-      label: 'Claude Code',
-      path: join(home, '.claude.json'),
-      detect: join(home, '.claude'),
-      style: 'mcpServers',
-    },
-    {
-      id: 'cline',
-      label: 'Cline (VS Code)',
-      path: join(
-        appData,
-        'Code',
-        'User',
-        'globalStorage',
-        'saoudrizwan.claude-dev',
-        'settings',
-        'cline_mcp_settings.json',
-      ),
-      detect: join(appData, 'Code', 'User', 'globalStorage', 'saoudrizwan.claude-dev', 'settings'),
-      style: 'mcpServers',
-    },
-  ]
-}
-
 /** Composition root: builds the store, use cases, controllers and the hub. */
 async function bootstrap(): Promise<void> {
   const rooms = new RoomStore()
@@ -268,14 +260,19 @@ async function bootstrap(): Promise<void> {
   })
 
   const connect = buildConnectInfo()
-  const agentSetup = new AgentSetup(agentSetupTargets())
+  const agentSetup = new AgentSetup(
+    agentSetupTargets({ platform: process.platform, home: homedir(), env: process.env }),
+  )
   registerIpc({
     rooms: controller,
     settings,
     hub,
     channel,
     connect,
-    runAgentSetup: () => agentSetup.run({ command: 'node', args: [connect.mcpPath] }),
+    runAgentSetup: () =>
+      process.platform === 'win32'
+        ? agentSetup.run({ command: 'node', args: [connect.mcpPath] })
+        : agentSetup.run({ command: connect.launcher, args: [] }),
     getWindow: () => mainWindow,
     applySettings,
   })
