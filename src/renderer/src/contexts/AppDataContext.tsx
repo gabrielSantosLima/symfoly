@@ -70,6 +70,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       } else if (event.type === 'renamed') {
         setSelected((current) => (current === event.from ? event.to : current))
         void refresh()
+      } else if (event.type === 'ack') {
+        if (selected === event.room) void loadDetail(event.room)
       } else {
         void refresh()
       }

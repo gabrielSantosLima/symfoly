@@ -33,7 +33,7 @@ Commands:
   join <room> --as <name>          Enter a room
   leave <room>                     Leave a room
   delete <room>                    Delete a room and its history
-  send <room> <text> [--to <name>] [--kind chat|task|result] [--expects-reply] [--done]
+  send <room> <text> [--to <name>] [--kind chat|task|result] [--expects-reply] [--deadline <s>] [--done]
                                    Send a message to a room
   receive <room> [--since <seq>] [--wait <seconds>]   Wait for new messages
   receive --all [--since <seq>] [--wait <seconds>]    Wait across joined rooms
@@ -76,6 +76,7 @@ async function main(): Promise<void> {
 
       case 'send': {
         const room = required(positionals[0], 'room')
+        const deadline = stringFlag(flags, 'deadline')
         await client.join(room)
         client.send({
           room,
@@ -84,6 +85,7 @@ async function main(): Promise<void> {
           kind: stringFlag(flags, 'kind') as MessageKind | undefined,
           expectsReply: flags['expects-reply'] === true,
           done: flags.done === true,
+          deadlineSeconds: deadline ? Number(deadline) : undefined,
         })
         console.log(JSON.stringify({ ok: true }))
         break

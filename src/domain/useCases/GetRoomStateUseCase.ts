@@ -1,10 +1,11 @@
-import type { ParticipantInfo, RoomInfo, TaskInfo } from '../../shared/protocol'
+import type { AckInfo, ParticipantInfo, RoomInfo, TaskInfo } from '../../shared/protocol'
 import type { RoomStore } from '../services/RoomStore'
 
 export interface RoomState {
   room: RoomInfo
   participants: ParticipantInfo[]
   tasks: TaskInfo[]
+  acks: AckInfo[]
   lastSeq: number
 }
 
@@ -21,6 +22,7 @@ export class GetRoomStateUseCase {
       room: entity.toInfo(),
       participants: this.rooms.participantsOf(room),
       tasks: this.rooms.listTasks(room),
+      acks: this.rooms.listAcks(room),
       lastSeq,
     }
   }

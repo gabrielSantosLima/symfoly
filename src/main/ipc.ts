@@ -67,4 +67,5 @@ export function registerIpc(dependencies: IpcDependencies): void {
   hub.on('task', (room) => forward({ type: 'task', room }))
   hub.on('deleted', (room) => forward({ type: 'deleted', room }))
   hub.on('renamed', (from, to) => forward({ type: 'renamed', from, to }))
+  hub.on('ack', (room) => forward({ type: 'ack', room }))
 }

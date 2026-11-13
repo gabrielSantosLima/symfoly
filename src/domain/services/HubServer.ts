@@ -19,6 +19,7 @@ import type { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 import type { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import type { TaskUseCase } from '../useCases/TaskUseCase'
 import type { RenameRoomUseCase } from '../useCases/RenameRoomUseCase'
+import type { AckUseCase } from '../useCases/AckUseCase'
 
 export interface HubServerDependencies {
   joinRoom: JoinRoomUseCase
@@ -31,6 +32,7 @@ export interface HubServerDependencies {
   deleteRoom: DeleteRoomUseCase
   renameRoom: RenameRoomUseCase
   task: TaskUseCase
+  ack: AckUseCase
   getRoomState: GetRoomStateUseCase
 }
 
@@ -38,6 +40,8 @@ export interface HubServerOptions {
   token: string
   /** 0 (default) lets the OS pick a free port. */
   port?: number
+  /** How often overdue acks are swept. Defaults to 1000 ms. */
+  ackSweepMs?: number
 }
 
 export interface PresenceEvent {
@@ -55,6 +59,7 @@ export interface HubEvents {
   task: (room: string) => void
   deleted: (room: string) => void
   renamed: (from: string, to: string) => void
+  ack: (room: string) => void
 }
 
 export interface HubHandle {
@@ -160,6 +165,11 @@ export function createHubServer(
     }
   }
 
+  function broadcastAcks(room: string): void {
+    broadcast(room, { type: 'acks', room, acks: dependencies.ack.list(room) })
+    notify('ack', room)
+  }
+
   function handle(session: Session, message: ClientMessage): void {
     const socket = session.socket
 
@@ -209,10 +219,11 @@ export function createHubServer(
         }
 
         case 'send': {
+          const sender = session.name ?? 'agent'
           const stored = dependencies.sendMessage.execute({
             room: message.room,
             senderId: session.id,
-            senderName: session.name ?? 'agent',
+            senderName: sender,
             text: message.text,
             kind: message.kind,
             to: message.to,
@@ -223,6 +234,17 @@ export function createHubServer(
           broadcast(message.room, { type: 'message', message: stored })
           notify('message', stored)
           deliver(stored)
+
+          if (dependencies.ack.resolve(message.room, sender)) broadcastAcks(message.room)
+          if (stored.expectsReply && message.to) {
+            dependencies.ack.capture(message.room, {
+              id: stored.id,
+              from: sender,
+              to: message.to,
+              deadlineSeconds: message.deadlineSeconds,
+            })
+            broadcastAcks(message.room)
+          }
           return
         }
 
@@ -324,6 +346,19 @@ export function createHubServer(
     }
   }
 
+  const sweep = setInterval(() => {
+    const expired = dependencies.ack.expire()
+    for (const message of expired) {
+      broadcast(message.room, { type: 'message', message })
+      notify('message', message)
+      deliver(message)
+    }
+    if (expired.length) {
+      for (const room of new Set(expired.map((message) => message.room))) broadcastAcks(room)
+    }
+  }, options.ackSweepMs ?? 1000)
+  sweep.unref?.()
+
   wss.on('connection', (socket) => {
     const session: Session = {
       id: randomUUID(),
@@ -404,6 +439,7 @@ export function createHubServer(
         },
         close: () =>
           new Promise<void>((done) => {
+            clearInterval(sweep)
             for (const session of sessions.values()) session.socket.terminate()
             sessions.clear()
             wss.close(() => done())

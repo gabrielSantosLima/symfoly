@@ -45,6 +45,7 @@ export function Inspector() {
 
   const { tasks, participants, messages } = detail
   const verified = tasks.filter((task) => task.status === 'verified').length
+  const pendingAcks = detail.acks.filter((ack) => ack.status === 'pending')
 
   return (
     <aside className="flex w-[340px] flex-none flex-col gap-4 overflow-y-auto border-l border-border bg-surface p-3.5">
@@ -67,6 +68,24 @@ export function Inspector() {
           </ul>
         )}
       </Card>
+
+      {pendingAcks.length ? (
+        <Card title="Waiting on" meta={String(pendingAcks.length)}>
+          <ul className="flex flex-col gap-1.5">
+            {pendingAcks.map((ack) => {
+              const seconds = Math.max(0, Math.round((ack.deadlineAt - Date.now()) / 1000))
+              return (
+                <li key={ack.id} className="flex items-center gap-2 text-[12.5px]">
+                  <StatusDot tone="attention" />
+                  <span className="font-semibold">{ack.to}</span>
+                  <span className="text-muted">← {ack.from}</span>
+                  <span className="ml-auto font-mono text-[11px] text-muted">{seconds}s</span>
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
+      ) : null}
 
       <Card
         title="Board"

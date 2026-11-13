@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws'
 import type {
+  AckInfo,
   ClientMessage,
   HubMessage,
   MessageKind,
@@ -30,6 +31,7 @@ export interface SendOptions {
   ref?: string
   expectsReply?: boolean
   done?: boolean
+  deadlineSeconds?: number
 }
 
 export interface ReceiveOptions {
@@ -53,6 +55,7 @@ export interface RoomStateResult {
   room: RoomInfo
   participants: ParticipantInfo[]
   tasks: TaskInfo[]
+  acks: AckInfo[]
   lastSeq: number
 }
 
@@ -185,6 +188,7 @@ export class HubClient {
         room: state.room,
         participants: state.participants,
         tasks: state.tasks,
+        acks: state.acks,
         lastSeq: state.lastSeq,
       }
     })

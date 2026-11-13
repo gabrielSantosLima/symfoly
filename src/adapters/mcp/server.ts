@@ -55,6 +55,7 @@ async function main(): Promise<void> {
         kind: z.enum(['chat', 'task', 'result']).optional(),
         expectsReply: z.boolean().optional(),
         done: z.boolean().optional(),
+        deadlineSeconds: z.number().optional(),
       },
     },
     async (args) => textResult(await tools.send(args)),

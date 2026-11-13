@@ -124,4 +124,36 @@ describe('RoomStore', () => {
     expect(renamed?.brief).toBe('keep me')
     expect(renamed?.isOpen).toBe(false)
   })
+
+  it('tracks a pending ack until the addressee answers', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.addAck('r1', { id: 'm1', from: 'a', to: 'b', deadlineAt: Date.now() + 10_000 })
+    expect(store.listAcks('r1')).toHaveLength(1)
+    expect(store.listAcks('r1')[0]?.status).toBe('pending')
+
+    expect(store.resolveAcks('r1', 'b')).toBe(true)
+    expect(store.listAcks('r1')[0]?.status).toBe('answered')
+    expect(store.resolveAcks('r1', 'b')).toBe(false)
+  })
+
+  it('expires overdue acks', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.addAck('r1', { id: 'm1', from: 'a', to: 'b', deadlineAt: Date.now() - 1 })
+
+    const expired = store.expireAcks()
+    expect(expired).toHaveLength(1)
+    expect(expired[0]?.ack.status).toBe('expired')
+    expect(store.listAcks('r1')[0]?.status).toBe('expired')
+  })
+
+  it('keeps acks across a rename', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.addAck('r1', { id: 'm1', from: 'a', to: 'b', deadlineAt: Date.now() + 1000 })
+    store.rename('r1', 'r2')
+    expect(store.listAcks('r2')[0]?.room).toBe('r2')
+    expect(store.listAcks('r1')).toHaveLength(0)
+  })
 })

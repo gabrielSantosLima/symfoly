@@ -141,6 +141,7 @@ describe('App', () => {
         participants: [],
         messages: [],
         tasks: [],
+        acks: [],
       }),
     })
     render(<App />)
@@ -164,6 +165,7 @@ describe('App', () => {
         participants: [],
         messages: [],
         tasks: [],
+        acks: [],
       })),
       onEvent: (handler) => {
         handlers.push(handler)
@@ -196,5 +198,36 @@ describe('App', () => {
 
     await waitFor(() => expect(screen.queryByText('alpha')).not.toBeInTheDocument())
     expect(screen.getByText('beta')).toBeInTheDocument()
+  })
+
+  it('shows pending asks in the inspector', async () => {
+    installApi({
+      listRooms: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        ]),
+      getRoomDetail: vi.fn().mockResolvedValue({
+        room: { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        participants: [],
+        messages: [],
+        tasks: [],
+        acks: [
+          {
+            id: 'm1',
+            room: 'r1',
+            from: 'a',
+            to: 'b',
+            createdAt: 1,
+            deadlineAt: Date.now() + 30_000,
+            status: 'pending',
+          },
+        ],
+      }),
+    })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
+    expect(await screen.findByText('Waiting on')).toBeInTheDocument()
+    expect(screen.getByText('b')).toBeInTheDocument()
   })
 })

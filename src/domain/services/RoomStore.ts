@@ -1,4 +1,10 @@
-import type { ParticipantInfo, ProtocolMessage, RoomInfo, TaskInfo } from '../../shared/protocol'
+import type {
+  AckInfo,
+  ParticipantInfo,
+  ProtocolMessage,
+  RoomInfo,
+  TaskInfo,
+} from '../../shared/protocol'
 import { Message, type NewMessage } from '../entities/Message'
 import { Participant, type JoinRoomParticipantInput } from '../entities/Participant'
 import { Room, type CreateRoomInput } from '../entities/Room'
@@ -16,6 +22,7 @@ export class RoomStore {
   private readonly participants = new Map<string, Participant[]>()
   private readonly messages = new Map<string, Message[]>()
   private readonly tasks = new Map<string, Task[]>()
+  private readonly acks = new Map<string, AckInfo[]>()
   private readonly counters = new Map<string, number>()
   private readonly listeners = new Set<() => void>()
   private retention = 0
@@ -38,6 +45,7 @@ export class RoomStore {
     this.participants.set(input.name, [])
     this.messages.set(input.name, [])
     this.tasks.set(input.name, [])
+    this.acks.set(input.name, [])
     this.counters.set(input.name, 0)
     this.changed()
     return room
@@ -105,6 +113,7 @@ export class RoomStore {
     this.messages.delete(name)
     this.tasks.delete(name)
     this.counters.delete(name)
+    this.acks.delete(name)
     this.changed()
     return true
   }
@@ -138,6 +147,12 @@ export class RoomStore {
       (this.tasks.get(from) ?? []).map((task) => Task.fromInfo({ ...task.toInfo(), room: to })),
     )
     this.tasks.delete(from)
+
+    this.acks.set(
+      to,
+      (this.acks.get(from) ?? []).map((ack) => ({ ...ack, room: to })),
+    )
+    this.acks.delete(from)
 
     this.counters.set(to, this.counters.get(from) ?? 0)
     this.counters.delete(from)
@@ -228,6 +243,58 @@ export class RoomStore {
     return task
   }
 
+  listAcks(name: string): AckInfo[] {
+    return (this.acks.get(name) ?? []).map((ack) => ({ ...ack }))
+  }
+
+  addAck(
+    room: string,
+    input: { id: string; from: string; to: string; deadlineAt: number },
+  ): AckInfo {
+    const list = this.acks.get(room)
+    if (!list) throw new Error(`room not found: ${room}`)
+    const ack: AckInfo = {
+      id: input.id,
+      room,
+      from: input.from,
+      to: input.to,
+      createdAt: Date.now(),
+      deadlineAt: input.deadlineAt,
+      status: 'pending',
+    }
+    list.push(ack)
+    this.changed()
+    return ack
+  }
+
+  /** Marks the room's pending acks addressed to `responder` as answered. */
+  resolveAcks(room: string, responder: string): boolean {
+    let changed = false
+    for (const ack of this.acks.get(room) ?? []) {
+      if (ack.status === 'pending' && ack.to === responder) {
+        ack.status = 'answered'
+        changed = true
+      }
+    }
+    if (changed) this.changed()
+    return changed
+  }
+
+  /** Marks overdue pending acks as expired and returns them. */
+  expireAcks(now = Date.now()): { room: string; ack: AckInfo }[] {
+    const expired: { room: string; ack: AckInfo }[] = []
+    for (const [room, list] of this.acks) {
+      for (const ack of list) {
+        if (ack.status === 'pending' && ack.deadlineAt <= now) {
+          ack.status = 'expired'
+          expired.push({ room, ack })
+        }
+      }
+    }
+    if (expired.length) this.changed()
+    return expired
+  }
+
   snapshot(): Snapshot {
     return {
       rooms: [...this.rooms.values()].map((room) => ({
@@ -253,6 +320,7 @@ export class RoomStore {
         room.name,
         (entry.tasks ?? []).map((task) => Task.fromInfo(task)),
       )
+      this.acks.set(room.name, [])
       this.counters.set(
         room.name,
         messages.reduce((max, message) => Math.max(max, message.seq), 0),

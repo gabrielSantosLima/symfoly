@@ -47,6 +47,7 @@ export interface RoomDetail {
   participants: ParticipantInfo[]
   messages: ProtocolMessage[]
   tasks: TaskInfo[]
+  acks: AckInfo[]
 }
 
 export type TaskStatus = 'open' | 'claimed' | 'blocked' | 'done' | 'verified' | 'closed'
@@ -65,6 +66,20 @@ export interface TaskInfo {
   leaseExpiresAt?: number
 }
 
+export type AckStatus = 'pending' | 'answered' | 'expired'
+
+/** A request that expects an answer, tracked by the hub until answered or expired. */
+export interface AckInfo {
+  /** Id of the message that asked for the reply. */
+  id: string
+  room: string
+  from: string
+  to: string
+  createdAt: number
+  deadlineAt: number
+  status: AckStatus
+}
+
 export interface ClientMessageMap {
   /** First message on every connection. A bad token closes the socket. */
   hello: { token: string; name: string; kind: ParticipantKind }
@@ -78,6 +93,8 @@ export interface ClientMessageMap {
     ref?: string
     expectsReply?: boolean
     done?: boolean
+    /** Seconds to wait for a reply when `expectsReply` is set. */
+    deadlineSeconds?: number
   }
   /** Long-poll: resolves with new messages, or empty after `wait` seconds. */
   receive: {
@@ -118,10 +135,12 @@ export interface HubMessageMap {
   rooms: { rooms: RoomInfo[] }
   received: { requestId: string; messages: ProtocolMessage[] }
   tasks: { room: string; tasks: TaskInfo[] }
+  acks: { room: string; acks: AckInfo[] }
   state: {
     room: RoomInfo
     participants: ParticipantInfo[]
     tasks: TaskInfo[]
+    acks: AckInfo[]
     lastSeq: number
   }
   error: { code: string; message: string }

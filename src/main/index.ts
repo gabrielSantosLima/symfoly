@@ -35,6 +35,7 @@ import { SetRoomPausedUseCase } from '../domain/useCases/SetRoomPausedUseCase'
 import { DeleteRoomUseCase } from '../domain/useCases/DeleteRoomUseCase'
 import { GetRoomStateUseCase } from '../domain/useCases/GetRoomStateUseCase'
 import { RenameRoomUseCase } from '../domain/useCases/RenameRoomUseCase'
+import { AckUseCase } from '../domain/useCases/AckUseCase'
 import { TaskUseCase } from '../domain/useCases/TaskUseCase'
 import type { AppSettingsData } from '../shared/settings'
 import type { ConnectInfo } from '../shared/ipc'
@@ -247,6 +248,7 @@ async function bootstrap(): Promise<void> {
       setRoomPaused: new SetRoomPausedUseCase(rooms),
       deleteRoom: new DeleteRoomUseCase(rooms),
       renameRoom: new RenameRoomUseCase(rooms),
+      ack: new AckUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },

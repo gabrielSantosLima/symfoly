@@ -10,6 +10,7 @@ import { SendMessageUseCase } from '../useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 import { DeleteRoomUseCase } from '../useCases/DeleteRoomUseCase'
 import { RenameRoomUseCase } from '../useCases/RenameRoomUseCase'
+import { AckUseCase } from '../useCases/AckUseCase'
 import { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../useCases/TaskUseCase'
 import { createHubServer, type HubHandle } from './HubServer'
@@ -32,10 +33,11 @@ async function startHub(): Promise<{ url: string; hub: HubHandle }> {
       setRoomPaused: new SetRoomPausedUseCase(rooms),
       deleteRoom: new DeleteRoomUseCase(rooms),
       renameRoom: new RenameRoomUseCase(rooms),
+      ack: new AckUseCase(rooms),
       task: new TaskUseCase(rooms),
       getRoomState: new GetRoomStateUseCase(rooms),
     },
-    { token: TOKEN, port: 0 },
+    { token: TOKEN, port: 0, ackSweepMs: 20 },
   )
   hubs.push(hub)
   return { url: `ws://127.0.0.1:${hub.port}`, hub }
@@ -204,5 +206,54 @@ describe('HubServer', () => {
     const echoed = await a.next('message')
     expect(echoed.message.room).toBe('r2')
     expect(echoed.message.text).toBe('still here')
+  })
+
+  it('tracks an ack and resolves it when the addressee replies', async () => {
+    const { url } = await startHub()
+    const a = await connect(url, 'a')
+    const b = await connect(url, 'b')
+    await join(a, 'r1')
+    await join(b, 'r1')
+
+    const firstAcks = a.next('acks')
+    a.send({
+      type: 'send',
+      room: 'r1',
+      to: 'b',
+      text: 'are you there?',
+      expectsReply: true,
+      deadlineSeconds: 300,
+    })
+    const tracked = await firstAcks
+    expect(tracked.acks).toHaveLength(1)
+    expect(tracked.acks[0]?.status).toBe('pending')
+    expect(tracked.acks[0]?.to).toBe('b')
+
+    const resolved = a.next('acks')
+    b.send({ type: 'send', room: 'r1', text: 'yes' })
+    expect((await resolved).acks[0]?.status).toBe('answered')
+  })
+
+  it('escalates an unanswered ack when its deadline passes', async () => {
+    const { url } = await startHub()
+    const a = await connect(url, 'a')
+    const b = await connect(url, 'b')
+    await join(a, 'r1')
+    await join(b, 'r1')
+
+    const pinged = a.next('message')
+    a.send({
+      type: 'send',
+      room: 'r1',
+      to: 'b',
+      text: 'ping',
+      expectsReply: true,
+      deadlineSeconds: 1,
+    })
+    expect((await pinged).message.text).toBe('ping')
+
+    const escalation = await a.next('message', 3000)
+    expect(escalation.message.kind).toBe('system')
+    expect(escalation.message.text).toContain('no reply from b to a')
   })
 })

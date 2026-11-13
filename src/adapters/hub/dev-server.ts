@@ -12,6 +12,7 @@ import { SendMessageUseCase } from '../../domain/useCases/SendMessageUseCase'
 import { SetRoomPausedUseCase } from '../../domain/useCases/SetRoomPausedUseCase'
 import { DeleteRoomUseCase } from '../../domain/useCases/DeleteRoomUseCase'
 import { RenameRoomUseCase } from '../../domain/useCases/RenameRoomUseCase'
+import { AckUseCase } from '../../domain/useCases/AckUseCase'
 import { GetRoomStateUseCase } from '../../domain/useCases/GetRoomStateUseCase'
 import { TaskUseCase } from '../../domain/useCases/TaskUseCase'
 
@@ -36,6 +37,7 @@ const hub = await createHubServer(
     setRoomPaused: new SetRoomPausedUseCase(rooms),
     deleteRoom: new DeleteRoomUseCase(rooms),
     renameRoom: new RenameRoomUseCase(rooms),
+    ack: new AckUseCase(rooms),
     task: new TaskUseCase(rooms),
     getRoomState: new GetRoomStateUseCase(rooms),
   },

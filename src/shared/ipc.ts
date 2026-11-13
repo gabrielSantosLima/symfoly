@@ -57,3 +57,4 @@ export type HubEvent =
   | { type: 'task'; room: string }
   | { type: 'deleted'; room: string }
   | { type: 'renamed'; from: string; to: string }
+  | { type: 'ack'; room: string }
