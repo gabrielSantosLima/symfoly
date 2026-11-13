@@ -20,6 +20,14 @@ function leaseLabel(task: TaskInfo): string | null {
   return `lease ${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
+function formatDuration(ms: number | null): string {
+  if (ms === null) return 'in progress'
+  const total = Math.max(0, Math.round(ms / 1000))
+  const minutes = Math.floor(total / 60)
+  const seconds = total % 60
+  return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
+}
+
 function Card({ title, meta, children }: { title: string; meta?: string; children: ReactNode }) {
   return (
     <section className="rounded-lg border border-border bg-surface-2 p-3">
@@ -43,7 +51,7 @@ export function Inspector() {
     )
   }
 
-  const { tasks, participants, messages } = detail
+  const { tasks, participants, messages, metrics } = detail
   const verified = tasks.filter((task) => task.status === 'verified').length
   const pendingAcks = detail.acks.filter((ack) => ack.status === 'pending')
 
@@ -141,6 +149,21 @@ export function Inspector() {
             })}
           </div>
         )}
+      </Card>
+
+      <Card title="Coordination">
+        <dl className="grid grid-cols-2 gap-y-1.5 text-[12.5px]">
+          <dt className="text-muted">Conflicts avoided</dt>
+          <dd className="text-right font-semibold">{metrics.conflicts}</dd>
+          <dt className="text-muted">Escalations</dt>
+          <dd className="text-right font-semibold">{metrics.escalations}</dd>
+          <dt className="text-muted">Tasks verified</dt>
+          <dd className="text-right font-semibold">
+            {metrics.verified} / {metrics.tasks}
+          </dd>
+          <dt className="text-muted">Convergence</dt>
+          <dd className="text-right font-semibold">{formatDuration(metrics.convergenceMs)}</dd>
+        </dl>
       </Card>
 
       <Card title="Overview">

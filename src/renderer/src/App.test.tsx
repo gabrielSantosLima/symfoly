@@ -151,6 +151,14 @@ describe('App', () => {
         tasks: [],
         acks: [],
         floor: { holder: null },
+        metrics: {
+          messages: 0,
+          tasks: 0,
+          verified: 0,
+          conflicts: 0,
+          escalations: 0,
+          convergenceMs: null,
+        },
       }),
     })
     render(<App />)
@@ -181,6 +189,14 @@ describe('App', () => {
         tasks: [],
         acks: [],
         floor: { holder: null },
+        metrics: {
+          messages: 0,
+          tasks: 0,
+          verified: 0,
+          conflicts: 0,
+          escalations: 0,
+          convergenceMs: null,
+        },
       })),
       onEvent: (handler) => {
         handlers.push(handler)
@@ -246,6 +262,14 @@ describe('App', () => {
           },
         ],
         floor: { holder: null },
+        metrics: {
+          messages: 0,
+          tasks: 0,
+          verified: 0,
+          conflicts: 0,
+          escalations: 0,
+          convergenceMs: null,
+        },
       }),
     })
     render(<App />)
@@ -280,6 +304,14 @@ describe('App', () => {
         tasks: [],
         acks: [],
         floor: { holder: null },
+        metrics: {
+          messages: 0,
+          tasks: 0,
+          verified: 0,
+          conflicts: 0,
+          escalations: 0,
+          convergenceMs: null,
+        },
       }),
     })
     render(<App />)
@@ -287,5 +319,49 @@ describe('App', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'executing' }))
     await waitFor(() => expect(api.setPhase).toHaveBeenCalledWith('r1', 'executing'))
+  })
+
+  it('shows coordination metrics in the inspector', async () => {
+    installApi({
+      listRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+      ]),
+      getRoomDetail: vi.fn().mockResolvedValue({
+        room: {
+          id: 'r1',
+          name: 'r1',
+          status: 'open',
+          phase: 'planning',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+        participants: [],
+        messages: [],
+        tasks: [],
+        acks: [],
+        floor: { holder: null },
+        metrics: {
+          messages: 4,
+          tasks: 2,
+          verified: 1,
+          conflicts: 3,
+          escalations: 1,
+          convergenceMs: 62_000,
+        },
+      }),
+    })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
+
+    expect(await screen.findByText('Coordination')).toBeInTheDocument()
+    expect(screen.getByText('Conflicts avoided')).toBeInTheDocument()
+    expect(screen.getByText('1m 2s')).toBeInTheDocument()
   })
 })

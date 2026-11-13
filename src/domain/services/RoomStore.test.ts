@@ -192,4 +192,24 @@ describe('RoomStore', () => {
     store.rename('r1', 'r2')
     expect(store.floorOf('r2').holder).toBe('a')
   })
+
+  it('derives coordination metrics from stored state', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    const task = store.discoverTask('r1', { title: 't', createdBy: 'human' })
+    store.append('r1', { senderId: 's1', senderName: 'a', text: 'hi' })
+    store.claimTask('r1', task.id, 'a', 10_000)
+    expect(() => store.claimTask('r1', task.id, 'b', 10_000)).toThrow()
+
+    const metrics = store.metricsOf('r1')
+    expect(metrics.messages).toBe(1)
+    expect(metrics.tasks).toBe(1)
+    expect(metrics.conflicts).toBe(1)
+    expect(metrics.convergenceMs).toBeNull()
+
+    store.completeTask('r1', task.id, 'a', 'done')
+    store.verifyTask('r1', task.id, 'b')
+    expect(store.metricsOf('r1').verified).toBe(1)
+    expect(store.metricsOf('r1').convergenceMs).toBeTypeOf('number')
+  })
 })

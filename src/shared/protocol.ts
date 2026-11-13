@@ -58,6 +58,20 @@ export interface RoomDetail {
   tasks: TaskInfo[]
   acks: AckInfo[]
   floor: FloorInfo
+  metrics: RoomMetrics
+}
+
+/** Coordination observability derived from stored state (nothing invented). */
+export interface RoomMetrics {
+  messages: number
+  tasks: number
+  verified: number
+  /** Task claims blocked by an active lease, or floor-busy refusals. */
+  conflicts: number
+  /** Acks that timed out without a reply. */
+  escalations: number
+  /** Room age until the last closed task, or null while work is open. */
+  convergenceMs: number | null
 }
 
 export type TaskStatus = 'open' | 'claimed' | 'blocked' | 'done' | 'verified' | 'closed'

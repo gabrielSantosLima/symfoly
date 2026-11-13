@@ -50,6 +50,7 @@ export class AckUseCase {
         room,
         `no reply from ${ack.to} to ${ack.from} after ${seconds}s`,
       )
+      this.rooms.bumpSignal(room, 'escalations')
       messages.push(message.toProtocol())
     }
     return messages

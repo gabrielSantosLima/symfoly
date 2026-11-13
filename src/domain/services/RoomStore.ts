@@ -4,6 +4,7 @@ import type {
   ParticipantInfo,
   ProtocolMessage,
   RoomInfo,
+  RoomMetrics,
   RoomPhase,
   TaskInfo,
 } from '../../shared/protocol'
@@ -26,6 +27,7 @@ export class RoomStore {
   private readonly tasks = new Map<string, Task[]>()
   private readonly acks = new Map<string, AckInfo[]>()
   private readonly floors = new Map<string, { holder: string; expiresAt: number }>()
+  private readonly signals = new Map<string, { conflicts: number; escalations: number }>()
   private readonly counters = new Map<string, number>()
   private readonly listeners = new Set<() => void>()
   private retention = 0
@@ -50,6 +52,7 @@ export class RoomStore {
     this.tasks.set(input.name, [])
     this.acks.set(input.name, [])
     this.floors.delete(input.name)
+    this.signals.set(input.name, { conflicts: 0, escalations: 0 })
     this.counters.set(input.name, 0)
     this.changed()
     return room
@@ -119,6 +122,7 @@ export class RoomStore {
     this.counters.delete(name)
     this.acks.delete(name)
     this.floors.delete(name)
+    this.signals.delete(name)
     this.changed()
     return true
   }
@@ -162,6 +166,10 @@ export class RoomStore {
     const floor = this.floors.get(from)
     this.floors.delete(from)
     if (floor) this.floors.set(to, floor)
+
+    const signal = this.signals.get(from)
+    this.signals.delete(from)
+    if (signal) this.signals.set(to, signal)
 
     this.counters.set(to, this.counters.get(from) ?? 0)
     this.counters.delete(from)
@@ -219,7 +227,14 @@ export class RoomStore {
     if (missing.length) {
       throw new DomainError('deps_pending', `blocked by: ${missing.join(', ')}`)
     }
-    task.claim(owner, ttlMs)
+    try {
+      task.claim(owner, ttlMs)
+    } catch (error) {
+      if (error instanceof DomainError && error.code === 'already_claimed') {
+        this.bumpSignal(name, 'conflicts')
+      }
+      throw error
+    }
     this.changed()
     return task
   }
@@ -321,6 +336,7 @@ export class RoomStore {
   acquireFloor(name: string, holder: string, ttlMs: number): FloorInfo {
     const current = this.floorOf(name)
     if (current.holder && current.holder !== holder) {
+      this.bumpSignal(name, 'conflicts')
       throw new DomainError('floor_busy', `floor held by ${current.holder}`)
     }
     const expiresAt = Date.now() + ttlMs
@@ -357,6 +373,33 @@ export class RoomStore {
     }
     if (changedRooms.length) this.changed()
     return changedRooms
+  }
+
+  bumpSignal(name: string, key: 'conflicts' | 'escalations'): void {
+    const signal = this.signals.get(name)
+    if (!signal) return
+    signal[key] += 1
+    this.changed()
+  }
+
+  metricsOf(name: string): RoomMetrics {
+    const room = this.rooms.get(name)
+    const signal = this.signals.get(name) ?? { conflicts: 0, escalations: 0 }
+    const tasks = this.tasks.get(name) ?? []
+    const closed = tasks.filter((task) => task.isClosed)
+    const verified = tasks.filter((task) => task.currentStatus === 'verified').length
+    const convergenceMs =
+      room && tasks.length > 0 && closed.length === tasks.length
+        ? Math.max(...closed.map((task) => task.toInfo().updatedAt)) - room.createdAt
+        : null
+    return {
+      messages: (this.messages.get(name) ?? []).length,
+      tasks: tasks.length,
+      verified,
+      conflicts: signal.conflicts,
+      escalations: signal.escalations,
+      convergenceMs,
+    }
   }
 
   snapshot(): Snapshot {

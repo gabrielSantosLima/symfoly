@@ -18,6 +18,7 @@ export class GetRoomDetailUseCase {
       tasks: this.rooms.listTasks(room),
       acks: this.rooms.listAcks(room),
       floor: this.rooms.floorOf(room),
+      metrics: this.rooms.metricsOf(room),
     }
   }
 }
