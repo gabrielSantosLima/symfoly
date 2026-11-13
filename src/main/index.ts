@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { copyFileSync, cpSync, mkdirSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
@@ -17,7 +17,9 @@ import { RoomsController } from '../controllers/RoomsController'
 import { SettingsController } from '../controllers/SettingsController'
 import { EndpointStore, defaultEndpointPath } from '../domain/services/EndpointStore'
 import { AgentSetup } from '../domain/services/AgentSetup'
-import { agentSetupTargets } from '../domain/services/agentTargets'
+import { agentSetupTargets, skillTargets } from '../domain/services/agentTargets'
+import { SkillSetup } from '../domain/services/SkillSetup'
+import { runDiagnostics } from '../domain/services/Diagnostics'
 import { createHubServer, type HubHandle } from '../domain/services/HubServer'
 import { Launchers, type LauncherSpec } from '../domain/services/Launchers'
 import { Persistence } from '../domain/services/Persistence'
@@ -231,7 +233,7 @@ async function bootstrap(): Promise<void> {
   }
   applySettings(settings.get())
 
-  hub = await createHubServer(
+  const server = await createHubServer(
     {
       joinRoom: new JoinRoomUseCase(rooms),
       leaveRoom: new LeaveRoomUseCase(rooms),
@@ -250,7 +252,8 @@ async function bootstrap(): Promise<void> {
     },
     { token: randomUUID(), port: 0 },
   )
-  endpointStore.save({ port: hub.port, token: hub.token })
+  hub = server
+  endpointStore.save({ port: server.port, token: server.token })
 
   const controller = new RoomsController({
     createRoom: new CreateRoomUseCase(rooms),
@@ -260,9 +263,13 @@ async function bootstrap(): Promise<void> {
   })
 
   const connect = buildConnectInfo()
-  const agentSetup = new AgentSetup(
-    agentSetupTargets({ platform: process.platform, home: homedir(), env: process.env }),
-  )
+  const context = { platform: process.platform, home: homedir(), env: process.env }
+  const agentTargets = agentSetupTargets(context)
+  const skillsTargets = skillTargets(context)
+  const agentSetup = new AgentSetup(agentTargets)
+  const skillSetup = new SkillSetup(skillsTargets)
+  const endpointFile = defaultEndpointPath(channel)
+  const isWindows = process.platform === 'win32'
   registerIpc({
     rooms: controller,
     settings,
@@ -270,9 +277,19 @@ async function bootstrap(): Promise<void> {
     channel,
     connect,
     runAgentSetup: () =>
-      process.platform === 'win32'
+      isWindows
         ? agentSetup.run({ command: 'node', args: [connect.mcpPath] })
         : agentSetup.run({ command: connect.launcher, args: [] }),
+    runSkillSetup: () => skillSetup.run(connect.skillsPath),
+    diagnostics: () =>
+      runDiagnostics({
+        endpointFile,
+        endpointPresent: existsSync(endpointFile),
+        port: server.port,
+        hubUrl: `ws://127.0.0.1:${server.port}`,
+        agentTargets,
+        skillTargets: skillsTargets,
+      }),
     getWindow: () => mainWindow,
     applySettings,
   })

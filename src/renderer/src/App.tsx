@@ -22,9 +22,9 @@ function Shell() {
       <div className="flex min-h-0 flex-1">
         <Sidebar view={view} onNavigate={setView} query={query} />
         <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-          {view === 'rooms' ? <RoomWorkspace /> : null}
-          {view === 'agents' ? <AgentsView /> : null}
-          {view === 'connect' ? <ConnectView /> : null}
+          {view === 'rooms' ? <RoomWorkspace onNavigate={setView} /> : null}
+          {view === 'agents' ? <AgentsView onNavigate={setView} /> : null}
+          {view === 'connect' ? <ConnectView onNavigate={setView} /> : null}
           {view === 'settings' ? <SettingsView /> : null}
           {view === 'about' ? <AboutView /> : null}
         </main>

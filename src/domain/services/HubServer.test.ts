@@ -295,4 +295,19 @@ describe('HubServer', () => {
     a.send({ type: 'floor', room: 'r1', action: 'release' })
     expect((await released).floor.holder).toBeNull()
   })
+
+  it('gives colliding names a unique suffix so members stay distinct', async () => {
+    const { url } = await startHub()
+    const a = await connect(url, 'dev')
+    const b = await connect(url, 'dev')
+    await join(a, 'r1')
+    await join(b, 'r1')
+
+    a.send({ type: 'state', room: 'r1' })
+    const state = await a.next('state')
+    expect(state.participants.map((participant) => participant.name).sort()).toEqual([
+      'dev',
+      'dev-2',
+    ])
+  })
 })

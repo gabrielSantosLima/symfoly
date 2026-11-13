@@ -40,6 +40,15 @@ function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
       launchAtLogin: false,
     }),
     setupAgents: vi.fn().mockResolvedValue([]),
+    setupSkills: vi.fn().mockResolvedValue([]),
+    diagnostics: vi.fn().mockResolvedValue({
+      endpointFile: '/tmp/endpoint.json',
+      endpointPresent: true,
+      port: 4321,
+      hubUrl: 'ws://127.0.0.1:4321',
+      agents: [],
+      skills: [],
+    }),
     onEvent: vi.fn().mockReturnValue(() => {}),
     ...overrides,
   }
@@ -74,7 +83,7 @@ describe('App', () => {
   it('shows ready-to-copy agent config on the Connect view', async () => {
     installApi()
     render(<App />)
-    fireEvent.click(await screen.findByRole('button', { name: /Connect/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Connect' }))
     expect((await screen.findAllByText(/mcpServers/)).length).toBeGreaterThan(0)
   })
 

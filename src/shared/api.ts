@@ -1,4 +1,4 @@
-import type { CreateRoomRequest, HubEvent, HubStatus, SetupResult } from './ipc'
+import type { CreateRoomRequest, DiagnosticsReport, HubEvent, HubStatus, SetupResult } from './ipc'
 import type { RoomDetail, RoomInfo, RoomPhase } from './protocol'
 import type { AppSettingsData } from './settings'
 
@@ -16,5 +16,7 @@ export interface SymfolyApi {
   getSettings: () => Promise<AppSettingsData>
   saveSettings: (patch: Partial<AppSettingsData>) => Promise<AppSettingsData>
   setupAgents: () => Promise<SetupResult[]>
+  setupSkills: () => Promise<SetupResult[]>
+  diagnostics: () => Promise<DiagnosticsReport>
   onEvent: (handler: (event: HubEvent) => void) => () => void
 }

@@ -17,6 +17,8 @@ const api: SymfolyApi = {
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   saveSettings: (patch: Partial<AppSettingsData>) => ipcRenderer.invoke(IPC.saveSettings, patch),
   setupAgents: () => ipcRenderer.invoke(IPC.setupAgents),
+  setupSkills: () => ipcRenderer.invoke(IPC.setupSkills),
+  diagnostics: () => ipcRenderer.invoke(IPC.diagnostics),
   onEvent: (handler: (event: HubEvent) => void) => {
     const listener = (_event: IpcRendererEvent, payload: HubEvent): void => handler(payload)
     ipcRenderer.on(IPC.event, listener)

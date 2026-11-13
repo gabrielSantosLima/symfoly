@@ -3,6 +3,7 @@ import type { RoomsController } from '../controllers/RoomsController'
 import type { SettingsController } from '../controllers/SettingsController'
 import type { HubHandle } from '../domain/services/HubServer'
 import { IPC, type CreateRoomRequest, type HubEvent } from '../shared/ipc'
+import type { DiagnosticsReport } from '../shared/ipc'
 import type { RoomPhase } from '../shared/protocol'
 import type { AppSettingsData } from '../shared/settings'
 import type { ConnectInfo, SetupResult } from '../shared/ipc'
@@ -14,14 +15,26 @@ export interface IpcDependencies {
   channel: string
   connect: ConnectInfo
   runAgentSetup: () => SetupResult[]
+  runSkillSetup: () => SetupResult[]
+  diagnostics: () => DiagnosticsReport
   getWindow: () => BrowserWindow | null
   applySettings: (settings: AppSettingsData) => void
 }
 
 /** Registers IPC handlers and forwards hub events to the renderer window. */
 export function registerIpc(dependencies: IpcDependencies): void {
-  const { rooms, settings, hub, channel, connect, runAgentSetup, getWindow, applySettings } =
-    dependencies
+  const {
+    rooms,
+    settings,
+    hub,
+    channel,
+    connect,
+    runAgentSetup,
+    runSkillSetup,
+    diagnostics,
+    getWindow,
+    applySettings,
+  } = dependencies
 
   ipcMain.handle(IPC.status, () => ({
     port: hub.port,
@@ -61,6 +74,8 @@ export function registerIpc(dependencies: IpcDependencies): void {
     return next
   })
   ipcMain.handle(IPC.setupAgents, () => runAgentSetup())
+  ipcMain.handle(IPC.setupSkills, () => runSkillSetup())
+  ipcMain.handle(IPC.diagnostics, () => diagnostics())
 
   const forward = (event: HubEvent): void => {
     getWindow()?.webContents.send(IPC.event, event)

@@ -14,6 +14,32 @@ export function configDir({ platform, home, env }: AgentTargetContext): string {
   return env.XDG_CONFIG_HOME ?? join(home, '.config')
 }
 
+export interface SkillTarget {
+  id: string
+  label: string
+  dir: string
+  detect: string
+}
+
+/** Where each agent keeps its skills, per OS. */
+export function skillTargets(context: AgentTargetContext): SkillTarget[] {
+  const { home } = context
+  return [
+    {
+      id: 'opencode',
+      label: 'OpenCode',
+      dir: join(home, '.config', 'opencode', 'skill'),
+      detect: join(home, '.config', 'opencode'),
+    },
+    {
+      id: 'claude-code',
+      label: 'Claude Code',
+      dir: join(home, '.claude', 'skills'),
+      detect: join(home, '.claude'),
+    },
+  ]
+}
+
 /** Known agent config files, resolved per operating system. */
 export function agentSetupTargets(context: AgentTargetContext): SetupTarget[] {
   const { home } = context

@@ -211,6 +211,19 @@ export function createHubServer(
           return
 
         case 'join': {
+          if (!session.rooms.has(message.room)) {
+            const base = session.name ?? 'agent'
+            const taken = new Set(
+              (dependencies.getRoomState.execute(message.room)?.participants ?? []).map(
+                (participant) => participant.name,
+              ),
+            )
+            if (taken.has(base)) {
+              let suffix = 2
+              while (taken.has(`${base}-${suffix}`)) suffix += 1
+              session.name = `${base}-${suffix}`
+            }
+          }
           const result = dependencies.joinRoom.execute({
             room: message.room,
             sessionId: session.id,

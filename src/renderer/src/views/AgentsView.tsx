@@ -1,8 +1,10 @@
+import { MdCable } from 'react-icons/md'
 import { ViewHeader } from '../components/ViewHeader'
 import { useAppData } from '../contexts/AppDataContext'
 import { useAgents } from '../hooks/useAgents'
+import { buttonClass, type View } from '../lib/ui'
 
-export function AgentsView() {
+export function AgentsView({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const { rooms } = useAppData()
   const agents = useAgents(rooms)
 
@@ -11,9 +13,17 @@ export function AgentsView() {
       <ViewHeader title="Agents" subtitle={`${agents.length} connected agent(s)`} />
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         {agents.length === 0 ? (
-          <p className="text-sm text-muted">
-            No agents connected. They join a room through the MCP server or the CLI.
-          </p>
+          <div className="flex flex-col items-start gap-3">
+            <p className="text-sm text-muted">
+              No agents connected yet. Set one up and it will appear here.
+            </p>
+            {onNavigate ? (
+              <button type="button" className={buttonClass} onClick={() => onNavigate('connect')}>
+                <MdCable className="h-4 w-4" aria-hidden />
+                Connect an agent
+              </button>
+            ) : null}
+          </div>
         ) : (
           <table className="w-full max-w-2xl text-sm">
             <thead>

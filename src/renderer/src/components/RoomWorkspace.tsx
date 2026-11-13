@@ -3,7 +3,7 @@ import { MdChevronRight, MdClose, MdDelete, MdPause, MdPlayArrow } from 'react-i
 import { useAppData } from '../contexts/AppDataContext'
 import type { RoomPhase } from '../../../shared/protocol'
 import { roomLabel, roomTone } from '../lib/rooms'
-import { buttonGhostClass } from '../lib/ui'
+import { buttonGhostClass, type View } from '../lib/ui'
 import type { Tone } from './Badge'
 import { Badge } from './Badge'
 import { Avatar } from './Avatar'
@@ -25,7 +25,7 @@ const PHASE_TONE: Record<RoomPhase, Tone> = {
   review: 'attention',
 }
 
-export function RoomWorkspace() {
+export function RoomWorkspace({ onNavigate }: { onNavigate?: (view: View) => void }) {
   const { detail, setPaused, closeRoom, deleteRoom, renameRoom, setPhase, error } = useAppData()
   const [tab, setTab] = useState<Tab>('conversation')
   const endRef = useRef<HTMLDivElement>(null)
@@ -176,8 +176,17 @@ export function RoomWorkspace() {
             </div>
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted">
-            Select a room to watch the conversation.
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-sm text-muted">
+            <p>Select a room to watch the conversation, or connect an agent.</p>
+            {onNavigate ? (
+              <button
+                type="button"
+                className={buttonGhostClass}
+                onClick={() => onNavigate('connect')}
+              >
+                Connect an agent
+              </button>
+            ) : null}
           </div>
         )}
       </div>

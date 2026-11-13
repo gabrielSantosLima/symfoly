@@ -14,6 +14,8 @@ export const IPC = {
   getSettings: 'settings:get',
   saveSettings: 'settings:save',
   setupAgents: 'setup:agents',
+  setupSkills: 'setup:skills',
+  diagnostics: 'hub:diagnostics',
   event: 'symfoly:event',
 } as const
 
@@ -47,6 +49,32 @@ export interface SetupResult {
   path: string
   status: 'created' | 'updated' | 'unchanged' | 'skipped'
   message?: string
+}
+
+export interface AgentDiagnostic {
+  id: string
+  label: string
+  path: string
+  detected: boolean
+  configured: boolean
+}
+
+export interface SkillDiagnostic {
+  id: string
+  label: string
+  dir: string
+  detected: boolean
+  installed: boolean
+}
+
+/** Health snapshot shown by the Connect view. */
+export interface DiagnosticsReport {
+  endpointFile: string
+  endpointPresent: boolean
+  port: number | null
+  hubUrl: string
+  agents: AgentDiagnostic[]
+  skills: SkillDiagnostic[]
 }
 
 /** Events pushed from the main process to the renderer. */

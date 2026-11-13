@@ -49,14 +49,27 @@ export class AgentSetup {
     }
 
     if (target.style === 'opencode') {
+      const mcp = (config.mcp as Record<string, unknown> | undefined) ?? {}
+      const servers = (mcp.servers as Record<string, unknown> | undefined) ?? {}
       config.mcp = {
-        ...(config.mcp as Record<string, unknown> | undefined),
-        symfoly: { type: 'local', command: [entry.command, ...entry.args], enabled: true },
+        ...mcp,
+        servers: {
+          ...servers,
+          symfoly: {
+            type: 'local',
+            command: [entry.command, ...entry.args],
+            environment: { SYMFOLY_NAME: target.id },
+          },
+        },
       }
     } else {
       config.mcpServers = {
         ...(config.mcpServers as Record<string, unknown> | undefined),
-        symfoly: { command: entry.command, args: entry.args },
+        symfoly: {
+          command: entry.command,
+          args: entry.args,
+          env: { SYMFOLY_NAME: target.id },
+        },
       }
     }
 

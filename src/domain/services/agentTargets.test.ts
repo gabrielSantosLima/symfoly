@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { agentSetupTargets, configDir } from './agentTargets'
+import { agentSetupTargets, configDir, skillTargets } from './agentTargets'
 
 function target(
   platform: NodeJS.Platform,
@@ -65,6 +65,16 @@ describe('agentTargets', () => {
         'settings',
         'cline_mcp_settings.json',
       ),
+    )
+  })
+
+  it('resolves the skills folder per agent', () => {
+    const targets = skillTargets({ platform: 'linux', home: '/home/u', env: {} })
+    expect(targets.find((entry) => entry.id === 'opencode')?.dir).toBe(
+      join('/home/u', '.config', 'opencode', 'skill'),
+    )
+    expect(targets.find((entry) => entry.id === 'claude-code')?.dir).toBe(
+      join('/home/u', '.claude', 'skills'),
     )
   })
 })

@@ -75,6 +75,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (selected === event.room) void loadDetail(event.room)
       } else if (event.type === 'phase' || event.type === 'floor') {
         if (selected === event.room) void loadDetail(event.room)
+      } else if (event.type === 'presence') {
+        if (selected === event.room) void loadDetail(event.room)
+        void refresh()
+      } else if (event.type === 'closed') {
+        if (selected === event.room) void loadDetail(event.room)
+        void refresh()
       } else {
         void refresh()
       }

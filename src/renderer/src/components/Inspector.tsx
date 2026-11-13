@@ -62,17 +62,26 @@ export function Inspector() {
           <p className="text-[12.5px] text-muted">No members yet.</p>
         ) : (
           <ul className="flex flex-col gap-1">
-            {participants.map((participant) => (
-              <li key={participant.id} className="flex items-center gap-2.5 py-0.5 text-[12.5px]">
-                <Avatar
-                  name={participant.name}
-                  variant={participant.kind === 'human' ? 'human' : 'agent'}
-                  size={22}
-                />
-                <span className="font-semibold">{participant.name}</span>
-                <span className="ml-auto text-[11px] text-muted">{participant.kind}</span>
-              </li>
-            ))}
+            {participants.map((participant) => {
+              const duplicated =
+                participants.filter((entry) => entry.name === participant.name).length > 1
+              return (
+                <li key={participant.id} className="flex items-center gap-2.5 py-0.5 text-[12.5px]">
+                  <Avatar
+                    name={participant.name}
+                    variant={participant.kind === 'human' ? 'human' : 'agent'}
+                    size={22}
+                  />
+                  <span className="font-semibold">{participant.name}</span>
+                  {duplicated ? (
+                    <span className="font-mono text-[10px] text-faint">
+                      {participant.id.slice(0, 4)}
+                    </span>
+                  ) : null}
+                  <span className="ml-auto text-[11px] text-muted">{participant.kind}</span>
+                </li>
+              )
+            })}
           </ul>
         )}
       </Card>

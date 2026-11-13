@@ -23,7 +23,7 @@ function textResult(data: unknown) {
 
 async function main(): Promise<void> {
   const { url, token } = resolveConnection()
-  const name = process.env.SYMFOLY_NAME ?? 'mcp'
+  const name = process.env.SYMFOLY_NAME ?? `mcp-${process.pid}`
   const client = await HubClient.connect({ url, token, name })
   const tools = new SymfolyTools(client)
 

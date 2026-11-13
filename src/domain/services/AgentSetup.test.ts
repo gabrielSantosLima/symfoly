@@ -23,7 +23,11 @@ describe('AgentSetup', () => {
 
     const config = JSON.parse(readFileSync(file, 'utf8'))
     expect(config.mcpServers.other).toEqual({ command: 'x' })
-    expect(config.mcpServers.symfoly).toEqual({ command: 'node', args: ['/mcp.mjs'] })
+    expect(config.mcpServers.symfoly).toEqual({
+      command: 'node',
+      args: ['/mcp.mjs'],
+      env: { SYMFOLY_NAME: 'x' },
+    })
   })
 
   it('creates an OpenCode config when the agent is present', () => {
@@ -35,8 +39,9 @@ describe('AgentSetup', () => {
     expect(result.status).toBe('created')
 
     const config = JSON.parse(readFileSync(join(dir, 'config.json'), 'utf8'))
-    expect(config.mcp.symfoly.type).toBe('local')
-    expect(config.mcp.symfoly.command).toEqual(['node', '/mcp.mjs'])
+    expect(config.mcp.servers.symfoly.type).toBe('local')
+    expect(config.mcp.servers.symfoly.command).toEqual(['node', '/mcp.mjs'])
+    expect(config.mcp.servers.symfoly.environment).toEqual({ SYMFOLY_NAME: 'x' })
   })
 
   it('skips when the agent is not installed', () => {
