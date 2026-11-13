@@ -188,4 +188,21 @@ describe('HubServer', () => {
     const error = await a.next('error')
     expect(error.code).toBe('not_joined')
   })
+
+  it('renames a room and lets joined agents keep working under the new name', async () => {
+    const { url, hub } = await startHub()
+    const a = await connect(url, 'a')
+    await join(a, 'r1')
+
+    const renamed = new Promise<[string, string]>((resolve) => {
+      hub.on('renamed', (from, to) => resolve([from, to]))
+    })
+    hub.renameRoom('r1', 'r2')
+    expect(await renamed).toEqual(['r1', 'r2'])
+
+    a.send({ type: 'send', room: 'r2', text: 'still here' })
+    const echoed = await a.next('message')
+    expect(echoed.message.room).toBe('r2')
+    expect(echoed.message.text).toBe('still here')
+  })
 })

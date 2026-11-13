@@ -93,4 +93,35 @@ describe('RoomStore', () => {
     expect(() => store.rename('a', 'b')).toThrow()
     expect(store.get('a')).toBeDefined()
   })
+
+  it('keeps the message cursor after a rename', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    store.append('r1', { senderId: 's1', senderName: 'a', text: 'one' })
+    store.rename('r1', 'r2')
+    const next = store.append('r2', { senderId: 's1', senderName: 'a', text: 'two' })
+    expect(next.seq).toBe(2)
+    expect(store.history('r2').map((message) => message.text)).toEqual(['one', 'two'])
+  })
+
+  it('returns undefined when renaming a missing room', () => {
+    const store = new RoomStore()
+    expect(store.rename('missing', 'other')).toBeUndefined()
+  })
+
+  it('treats renaming to the same name as a no-op', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human' })
+    expect(store.rename('r1', 'r1')?.name).toBe('r1')
+    expect(store.list()).toHaveLength(1)
+  })
+
+  it('preserves room metadata across a rename', () => {
+    const store = new RoomStore()
+    store.create({ name: 'r1', createdBy: 'human', brief: 'keep me' })
+    store.close('r1')
+    const renamed = store.rename('r1', 'r2')
+    expect(renamed?.brief).toBe('keep me')
+    expect(renamed?.isOpen).toBe(false)
+  })
 })

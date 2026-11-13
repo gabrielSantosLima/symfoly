@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { SymfolyApi } from '../../shared/api'
+import type { HubEvent } from '../../shared/ipc'
 import App from './App'
 
 function installApi(overrides: Partial<SymfolyApi> = {}): SymfolyApi {
@@ -74,5 +75,126 @@ describe('App', () => {
     render(<App />)
     fireEvent.click(await screen.findByRole('button', { name: /Connect/ }))
     expect((await screen.findAllByText(/mcpServers/)).length).toBeGreaterThan(0)
+  })
+
+  it('flips the theme with a single click', async () => {
+    const api = installApi()
+    render(<App />)
+    fireEvent.click(await screen.findByTitle('Toggle theme'))
+    await waitFor(() => expect(api.saveSettings).toHaveBeenCalledWith({ theme: 'dark' }))
+  })
+
+  it('creates a generically named room when New room is clicked', async () => {
+    const createRoom = vi.fn().mockResolvedValue({
+      id: 'new-room',
+      name: 'new-room',
+      status: 'open',
+      createdBy: 'human',
+      createdAt: 1,
+    })
+    installApi({ createRoom })
+    render(<App />)
+    const [newRoom] = await screen.findAllByRole('button', { name: 'New room' })
+    fireEvent.click(newRoom)
+    await waitFor(() => expect(createRoom).toHaveBeenCalled())
+    expect(createRoom).toHaveBeenCalledTimes(1)
+    expect(createRoom.mock.calls[0][0]).toMatchObject({ name: 'new-room' })
+  })
+
+  it('avoids clashing with an existing generic room name', async () => {
+    const createRoom = vi.fn().mockResolvedValue({
+      id: 'new-room-2',
+      name: 'new-room-2',
+      status: 'open',
+      createdBy: 'human',
+      createdAt: 1,
+    })
+    installApi({
+      listRooms: vi.fn().mockResolvedValue([
+        {
+          id: 'new-room',
+          name: 'new-room',
+          status: 'open',
+          createdBy: 'human',
+          createdAt: 1,
+        },
+      ]),
+      createRoom,
+    })
+    render(<App />)
+    await screen.findByText('new-room')
+    const [newRoom] = await screen.findAllByRole('button', { name: 'New room' })
+    fireEvent.click(newRoom)
+    await waitFor(() => expect(createRoom).toHaveBeenCalled())
+    expect(createRoom.mock.calls[0][0]).toMatchObject({ name: 'new-room-2' })
+  })
+
+  it('renames a room inline from its title', async () => {
+    const api = installApi({
+      listRooms: vi
+        .fn()
+        .mockResolvedValue([
+          { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        ]),
+      getRoomDetail: vi.fn().mockResolvedValue({
+        room: { id: 'r1', name: 'r1', status: 'open', createdBy: 'human', createdAt: 1 },
+        participants: [],
+        messages: [],
+        tasks: [],
+      }),
+    })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'r1' }))
+
+    const input = screen.getByLabelText('Rename room')
+    fireEvent.change(input, { target: { value: 'r2' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+
+    await waitFor(() => expect(api.renameRoom).toHaveBeenCalledWith('r1', 'r2'))
+  })
+
+  it('re-selects the renamed room when the hub reports a rename', async () => {
+    const handlers: ((event: HubEvent) => void)[] = []
+    const base = { status: 'open' as const, createdBy: 'human', createdAt: 1 }
+    installApi({
+      listRooms: vi.fn().mockResolvedValue([{ id: 'r1', name: 'r1', ...base }]),
+      getRoomDetail: vi.fn().mockImplementation(async (id: string) => ({
+        room: { id, name: id, ...base },
+        participants: [],
+        messages: [],
+        tasks: [],
+      })),
+      onEvent: (handler) => {
+        handlers.push(handler)
+        return () => {}
+      },
+    })
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: /r1 open/i }))
+    expect(await screen.findByRole('button', { name: 'r1' })).toBeInTheDocument()
+
+    act(() => {
+      for (const handler of handlers) handler({ type: 'renamed', from: 'r1', to: 'r2' })
+    })
+
+    expect(await screen.findByRole('button', { name: 'r2' })).toBeInTheDocument()
+  })
+
+  it('filters the room list from the top bar search', async () => {
+    const base = { status: 'open' as const, createdBy: 'human', createdAt: 1 }
+    installApi({
+      listRooms: vi.fn().mockResolvedValue([
+        { id: 'alpha', name: 'alpha', ...base },
+        { id: 'beta', name: 'beta', ...base },
+      ]),
+    })
+    render(<App />)
+    await screen.findByText('alpha')
+
+    fireEvent.change(screen.getByLabelText('Search rooms'), { target: { value: 'bet' } })
+
+    await waitFor(() => expect(screen.queryByText('alpha')).not.toBeInTheDocument())
+    expect(screen.getByText('beta')).toBeInTheDocument()
   })
 })
