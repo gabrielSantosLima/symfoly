@@ -3,50 +3,102 @@
 /* The app stores the resolved theme on <html data-theme="light|dark">. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
-/* Single source of truth for colours: change here to re-theme everything. */
+/* Single source of truth for colours: change here to re-theme everything.
+   Roles, not raw colours. See docs/ui-redesign/spec.md. */
 :root {
-  --app: #f1f5f9;
+  color-scheme: light;
+
+  --app: #f6f7f9;
   --surface: #ffffff;
-  --surface-2: #f8fafc;
-  --border: #e2e8f0;
-  --fg: #0f172a;
-  --muted: #64748b;
-  --brand: #4f46e5;
-  --brand-hover: #4338ca;
+  --surface-2: #f1f3f6;
+  --surface-3: #e8ebf0;
+  --border: #e3e6eb;
+  --border-strong: #cfd4dc;
+
+  --fg: #1a1f2b;
+  --muted: #5d6675;
+  --faint: #8b93a1;
+
+  --brand: #4f6ef2;
+  --brand-hover: #3d59d6;
   --brand-fg: #ffffff;
-  --success: #059669;
-  --warning: #b45309;
-  --danger: #dc2626;
+  --brand-soft: rgba(79, 110, 242, 0.1);
+
+  --success: #1f9d69;
+  --warning: #c9772a;
+  --danger: #d64540;
+
+  /* Coordination status vocabulary. */
+  --working: #2f7fe0;
+  --attention: #c9772a;
+  --neutral: #5d6675;
+  --tint-working: rgba(47, 127, 224, 0.12);
+  --tint-attention: rgba(201, 119, 42, 0.12);
+  --tint-success: rgba(31, 157, 105, 0.12);
+  --tint-danger: rgba(214, 69, 64, 0.12);
+  --tint-neutral: rgba(93, 102, 117, 0.1);
 }
 
 :root[data-theme='dark'] {
-  --app: #0b1120;
-  --surface: #111827;
-  --surface-2: #1e293b;
-  --border: #1f2937;
-  --fg: #e5e7eb;
-  --muted: #94a3b8;
-  --brand: #6366f1;
-  --brand-hover: #818cf8;
-  --brand-fg: #ffffff;
-  --success: #34d399;
-  --warning: #fbbf24;
-  --danger: #f87171;
+  color-scheme: dark;
+
+  --app: #0a0d13;
+  --surface: #10141c;
+  --surface-2: #161b25;
+  --surface-3: #1d2330;
+  --border: #232a37;
+  --border-strong: #333d4e;
+
+  --fg: #e7eaf0;
+  --muted: #8a93a4;
+  --faint: #5c6576;
+
+  --brand: #6a8dff;
+  --brand-hover: #8aa3ff;
+  --brand-fg: #0a0d13;
+  --brand-soft: rgba(106, 141, 255, 0.14);
+
+  --success: #46c98d;
+  --warning: #f0a64a;
+  --danger: #f0645e;
+
+  --working: #4f9cf9;
+  --attention: #f0a64a;
+  --neutral: #8a93a4;
+  --tint-working: rgba(79, 156, 249, 0.14);
+  --tint-attention: rgba(240, 166, 74, 0.14);
+  --tint-success: rgba(70, 201, 141, 0.14);
+  --tint-danger: rgba(240, 100, 94, 0.14);
+  --tint-neutral: rgba(138, 147, 164, 0.12);
 }
 
 @theme inline {
   --color-app: var(--app);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
   --color-fg: var(--fg);
   --color-muted: var(--muted);
+  --color-faint: var(--faint);
+
   --color-brand: var(--brand);
   --color-brand-hover: var(--brand-hover);
   --color-brand-fg: var(--brand-fg);
+  --color-brand-soft: var(--brand-soft);
+
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
+
+  --color-working: var(--working);
+  --color-attention: var(--attention);
+  --color-neutral: var(--neutral);
+
+  --font-sans: Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', ui-monospace, Menlo, monospace;
 }
 
 @layer base {
@@ -58,12 +110,8 @@
 
   body {
     margin: 0;
-    font-family:
-      system-ui,
-      -apple-system,
-      'Segoe UI',
-      sans-serif;
-    @apply overflow-hidden bg-app text-fg antialiased;
+    font-family: var(--font-sans);
+    @apply overflow-hidden bg-app text-[13px] text-fg antialiased;
   }
 
   :focus-visible {

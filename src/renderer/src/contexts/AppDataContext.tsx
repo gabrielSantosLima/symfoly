@@ -15,6 +15,7 @@ export interface AppData {
   createRoom: (name: string, brief?: string) => Promise<void>
   closeRoom: () => Promise<void>
   deleteRoom: () => Promise<void>
+  renameRoom: (room: string, name: string) => Promise<void>
   setPaused: (paused: boolean) => Promise<void>
   saveSettings: (patch: Partial<AppSettingsData>) => Promise<void>
 }
@@ -66,6 +67,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       } else if (event.type === 'deleted') {
         setSelected((current) => (current === event.room ? null : current))
         void refresh()
+      } else if (event.type === 'renamed') {
+        setSelected((current) => (current === event.from ? event.to : current))
+        void refresh()
       } else {
         void refresh()
       }
@@ -110,6 +114,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await refresh()
   }, [client, selected, refresh])
 
+  const renameRoom = useCallback(
+    async (room: string, name: string) => {
+      if (!client || !name.trim()) return
+      try {
+        setError('')
+        await client.renameRoom(room, name.trim())
+        await refresh()
+        setSelected(name.trim())
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
+    },
+    [client, refresh],
+  )
+
   const setPaused = useCallback(
     async (paused: boolean) => {
       if (!client || !selected) return
@@ -140,6 +159,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     createRoom,
     closeRoom,
     deleteRoom,
+    renameRoom,
     setPaused,
     saveSettings,
   }

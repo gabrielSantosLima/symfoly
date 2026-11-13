@@ -9,6 +9,7 @@ export interface SymfolyApi {
   closeRoom: (room: string) => Promise<boolean>
   pauseRoom: (room: string, paused: boolean) => Promise<boolean>
   deleteRoom: (room: string) => Promise<boolean>
+  renameRoom: (room: string, name: string) => Promise<boolean>
   getRoomDetail: (room: string) => Promise<RoomDetail | undefined>
   getStatus: () => Promise<HubStatus>
   getSettings: () => Promise<AppSettingsData>

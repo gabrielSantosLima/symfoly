@@ -1,29 +1,34 @@
 import { useState } from 'react'
-import { NavRail } from './components/NavRail'
+import { RoomWorkspace } from './components/RoomWorkspace'
+import { Sidebar } from './components/Sidebar'
+import { TopBar } from './components/TopBar'
 import { AppDataProvider, useAppData } from './contexts/AppDataContext'
 import { useTheme } from './hooks/useTheme'
 import type { View } from './lib/ui'
 import { AboutView } from './views/AboutView'
 import { AgentsView } from './views/AgentsView'
 import { ConnectView } from './views/ConnectView'
-import { RoomsView } from './views/RoomsView'
 import { SettingsView } from './views/SettingsView'
 
 function Shell() {
   const { settings } = useAppData()
   const [view, setView] = useState<View>('rooms')
-  useTheme(settings)
+  const [query, setQuery] = useState('')
+  const theme = useTheme(settings)
 
   return (
-    <div className="flex h-full overflow-hidden">
-      <NavRail view={view} onChange={setView} />
-      <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        {view === 'rooms' ? <RoomsView /> : null}
-        {view === 'agents' ? <AgentsView /> : null}
-        {view === 'connect' ? <ConnectView /> : null}
-        {view === 'settings' ? <SettingsView /> : null}
-        {view === 'about' ? <AboutView /> : null}
-      </main>
+    <div className="flex h-full flex-col overflow-hidden">
+      <TopBar theme={theme} query={query} onQuery={setQuery} />
+      <div className="flex min-h-0 flex-1">
+        <Sidebar view={view} onNavigate={setView} query={query} />
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {view === 'rooms' ? <RoomWorkspace /> : null}
+          {view === 'agents' ? <AgentsView /> : null}
+          {view === 'connect' ? <ConnectView /> : null}
+          {view === 'settings' ? <SettingsView /> : null}
+          {view === 'about' ? <AboutView /> : null}
+        </main>
+      </div>
     </div>
   )
 }

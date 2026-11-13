@@ -1,19 +1,33 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import type { AppSettingsData } from '../../../shared/settings'
 
-/** Applies the resolved theme (system/light/dark) to <html data-theme>. */
-export function useTheme(settings: AppSettingsData | null): void {
+export type ResolvedTheme = 'light' | 'dark'
+
+/**
+ * Applies the resolved theme to `<html data-theme>` and returns it, so callers
+ * can render theme-dependent UI in the same pass instead of reading the DOM.
+ */
+export function useTheme(settings: AppSettingsData | null): ResolvedTheme {
+  const [systemDark, setSystemDark] = useState(
+    () =>
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches,
+  )
+
   useEffect(() => {
-    if (!settings || typeof window.matchMedia !== 'function') return
+    if (typeof window.matchMedia !== 'function') return
     const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const apply = (): void => {
-      const resolved =
-        settings.theme === 'system' ? (media.matches ? 'dark' : 'light') : settings.theme
-      document.documentElement.dataset.theme = resolved
-    }
-    apply()
-    if (settings.theme !== 'system') return
-    media.addEventListener('change', apply)
-    return () => media.removeEventListener('change', apply)
-  }, [settings])
+    const onChange = (): void => setSystemDark(media.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+
+  const mode = settings?.theme ?? 'system'
+  const resolved: ResolvedTheme = mode === 'system' ? (systemDark ? 'dark' : 'light') : mode
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = resolved
+  }, [resolved])
+
+  return resolved
 }

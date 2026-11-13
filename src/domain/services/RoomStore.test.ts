@@ -68,4 +68,29 @@ describe('RoomStore', () => {
     expect(store.list()).toHaveLength(0)
     expect(store.delete('missing')).toBe(false)
   })
+
+  it('renames a room and re-keys its contents', () => {
+    const store = new RoomStore()
+    store.create({ name: 'old', createdBy: 'human', brief: 'b' })
+    store.join('old', { sessionId: 's1', name: 'a', kind: 'agent' })
+    store.append('old', { senderId: 's1', senderName: 'a', text: 'hi' })
+    store.discoverTask('old', { title: 't', createdBy: 'human' })
+
+    const renamed = store.rename('old', 'new')
+
+    expect(renamed?.name).toBe('new')
+    expect(store.get('old')).toBeUndefined()
+    expect(store.list().map((room) => room.name)).toEqual(['new'])
+    expect(store.participantsOf('new')).toHaveLength(1)
+    expect(store.history('new').map((message) => message.room)).toEqual(['new'])
+    expect(store.listTasks('new')[0]?.room).toBe('new')
+  })
+
+  it('refuses to rename onto an existing room', () => {
+    const store = new RoomStore()
+    store.create({ name: 'a', createdBy: 'human' })
+    store.create({ name: 'b', createdBy: 'human' })
+    expect(() => store.rename('a', 'b')).toThrow()
+    expect(store.get('a')).toBeDefined()
+  })
 })

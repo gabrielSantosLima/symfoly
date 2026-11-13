@@ -109,6 +109,43 @@ export class RoomStore {
     return true
   }
 
+  /** Re-keys a room and everything it owns under a new name. */
+  rename(from: string, to: string): Room | undefined {
+    const room = this.rooms.get(from)
+    if (!room) return undefined
+    if (from === to) return room
+    if (this.rooms.has(to)) {
+      throw new DomainError('room_exists', `a room named ${to} already exists`)
+    }
+
+    const moved = Room.fromInfo({ ...room.toInfo(), id: to, name: to })
+    this.rooms.delete(from)
+    this.rooms.set(to, moved)
+
+    this.participants.set(to, this.participants.get(from) ?? [])
+    this.participants.delete(from)
+
+    this.messages.set(
+      to,
+      (this.messages.get(from) ?? []).map((message) =>
+        Message.fromProtocol({ ...message.toProtocol(), room: to }),
+      ),
+    )
+    this.messages.delete(from)
+
+    this.tasks.set(
+      to,
+      (this.tasks.get(from) ?? []).map((task) => Task.fromInfo({ ...task.toInfo(), room: to })),
+    )
+    this.tasks.delete(from)
+
+    this.counters.set(to, this.counters.get(from) ?? 0)
+    this.counters.delete(from)
+
+    this.changed()
+    return moved
+  }
+
   count(name: string): number {
     return (this.messages.get(name) ?? []).length
   }

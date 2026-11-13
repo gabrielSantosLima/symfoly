@@ -44,6 +44,10 @@ export function registerIpc(dependencies: IpcDependencies): void {
     hub.deleteRoom(room)
     return true
   })
+  ipcMain.handle(IPC.renameRoom, (_event, room: string, name: string) => {
+    hub.renameRoom(room, name)
+    return true
+  })
   ipcMain.handle(IPC.roomDetail, (_event, room: string) => rooms.detail(room))
   ipcMain.handle(IPC.getSettings, () => settings.get())
   ipcMain.handle(IPC.saveSettings, (_event, patch: Partial<AppSettingsData>) => {
@@ -62,4 +66,5 @@ export function registerIpc(dependencies: IpcDependencies): void {
   hub.on('rooms', () => forward({ type: 'rooms' }))
   hub.on('task', (room) => forward({ type: 'task', room }))
   hub.on('deleted', (room) => forward({ type: 'deleted', room }))
+  hub.on('renamed', (from, to) => forward({ type: 'renamed', from, to }))
 }

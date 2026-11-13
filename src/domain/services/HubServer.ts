@@ -18,6 +18,7 @@ import type { SendMessageUseCase } from '../useCases/SendMessageUseCase'
 import type { SetRoomPausedUseCase } from '../useCases/SetRoomPausedUseCase'
 import type { GetRoomStateUseCase } from '../useCases/GetRoomStateUseCase'
 import type { TaskUseCase } from '../useCases/TaskUseCase'
+import type { RenameRoomUseCase } from '../useCases/RenameRoomUseCase'
 
 export interface HubServerDependencies {
   joinRoom: JoinRoomUseCase
@@ -28,6 +29,7 @@ export interface HubServerDependencies {
   closeRoom: CloseRoomUseCase
   setRoomPaused: SetRoomPausedUseCase
   deleteRoom: DeleteRoomUseCase
+  renameRoom: RenameRoomUseCase
   task: TaskUseCase
   getRoomState: GetRoomStateUseCase
 }
@@ -52,6 +54,7 @@ export interface HubEvents {
   rooms: () => void
   task: (room: string) => void
   deleted: (room: string) => void
+  renamed: (from: string, to: string) => void
 }
 
 export interface HubHandle {
@@ -61,6 +64,7 @@ export interface HubHandle {
   closeRoom(room: string): void
   setRoomPaused(room: string, paused: boolean): void
   deleteRoom(room: string): void
+  renameRoom(from: string, to: string): void
   close(): Promise<void>
 }
 
@@ -387,6 +391,15 @@ export function createHubServer(
             session.rooms.delete(room)
           }
           notify('deleted', room)
+          notify('rooms')
+        },
+        renameRoom: (from: string, to: string) => {
+          if (!dependencies.renameRoom.execute(from, to)) return
+          for (const session of sessionsIn(from)) {
+            session.rooms.delete(from)
+            session.rooms.add(to)
+          }
+          notify('renamed', from, to)
           notify('rooms')
         },
         close: () =>
