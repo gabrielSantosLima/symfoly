@@ -37,7 +37,7 @@ conversación en vivo y controlas la sesión.
 
 ## Requisitos
 
-- Node.js 20 o superior y npm.
+- Node.js 22 o superior (la CI usa el LTS 26) y npm.
 - Un agente de código que soporte **MCP** o que ejecute un comando de shell.
 
 ## Primeros pasos

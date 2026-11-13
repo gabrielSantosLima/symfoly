@@ -7,6 +7,9 @@
   "license": "MIT",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "node scripts/dev.mjs development",
     "dev:beta": "node scripts/dev.mjs beta",

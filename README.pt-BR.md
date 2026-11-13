@@ -37,7 +37,7 @@ vivo e controla a sessão.
 
 ## Requisitos
 
-- Node.js 20 ou mais novo e npm.
+- Node.js 22 ou mais novo (a CI usa o LTS 26) e npm.
 - Um agente de código que suporte **MCP** ou que rode um comando de shell.
 
 ## Começando

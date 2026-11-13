@@ -36,7 +36,7 @@ shares results. You watch the conversation live and control the session.
 
 ## Requirements
 
-- Node.js 20 or newer and npm.
+- Node.js 22 or newer (the CI uses the 26 LTS) and npm.
 - A coding agent that supports **MCP** or that can run a shell command.
 
 ## Getting started

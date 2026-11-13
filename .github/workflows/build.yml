@@ -36,6 +36,10 @@ jobs:
           ref: ${{ inputs.tag || github.ref }}
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
       - name: Build
         run: |
           npm ci && npm run build && npm run package
