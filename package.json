@@ -1,6 +1,6 @@
 {
   "name": "symfoly",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A message orchestrator to broadcast messages between agents",
   "main": "./out/main/index.js",
   "author": "Gabriel Lima <lima.gabrieldsantos@gmail.com>",
