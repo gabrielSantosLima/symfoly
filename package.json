@@ -22,6 +22,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
+    "prepackage": "node scripts/build-adapters.mjs",
     "package": "electron-builder --publish never",
     "dist": "electron-vite build && node scripts/build-adapters.mjs && electron-builder --publish never",
     "dist:beta": "electron-vite build && node scripts/build-adapters.mjs && electron-builder --config electron-builder.beta.yml --publish never",
